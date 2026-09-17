@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0a0a0c" />
+    <link rel="apple-touch-icon" href="/icon-192.svg" />
+    <meta name="google-site-verification" content="K-0Vrj0Ylft-ZluEm75ufqvFG-bnIp9erR-mqJ4FqUA" />
+    <title>HACYBERGLOBAL • HGT Multi-Bot Simulator</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      try {
+        // Only attempt to check or register service workers if we are in the top-level main window context,
+        // preventing cross-origin iframe security restrictions or Script Errors in the dev preview sandbox.
+        if (window.self === window.top && 'serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            try {
+              navigator.serviceWorker.register('/sw.js')
+                .then((reg) => console.log('⚡ PWA Service Worker Registered with scope:', reg.scope))
+                .catch((err) => console.warn('PWA Registration delayed or blocked in sandbox mode:', err));
+            } catch (innerErr) {
+              console.warn('Silent fallback: PWA registration rejected in sandbox context:', innerErr);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Service worker check blocked or restricted in current sandboxed sandbox context:', e);
+      }
+    </script>
+  </body>
+</html>
+

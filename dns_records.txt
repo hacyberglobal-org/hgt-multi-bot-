@@ -1,0 +1,61 @@
+===================================================================
+                  HGT MULTI-BOT DISPATCH NETWORK
+                 DNS RECORDS & ZONE CONFIGURATION
+===================================================================
+
+This file contains the complete CNAME, TXT, Nameserver, and security DNS 
+records required to sync your domain ("hacyberglobal.dgdns.org" or your custom
+domain) with the HGT Multi-Bot Dispatch cluster, Cloudflare edge proxies, 
+GitHub Pages, and Google Webmaster verification.
+
+-------------------------------------------------------------------
+1. NAMESERVERS (Cloudflare Delegation)
+-------------------------------------------------------------------
+To activate global CDN acceleration, DDoS protection, and edge SSL caching,
+delegate your domain nameservers to:
+
+  - Nameserver 1:  anirban.ns.cloudflare.com
+  - Nameserver 2:  cecelia.ns.cloudflare.com
+
+-------------------------------------------------------------------
+2. CNAME RECORDS (Traffic Routing)
+-------------------------------------------------------------------
+These records route web traffic, mobile bot requests, and telemetry payload
+redirects to the appropriate edge servers.
+
+  Type  | Name (Host) | Target / Value                      | TTL    | Proxy Status
+  ------|-------------|-------------------------------------|--------|-------------
+  CNAME | @ (or root) | hacyber-global.github.io            | Auto   | Proxied (Orange Cloud)
+  CNAME | web         | ais-pre-dlxtcm22exfd5ssxaa6siv-201471674421.us-east5.run.app | Auto   | Proxied (Orange Cloud)
+  CNAME | support     | ais-pre-dlxtcm22exfd5ssxaa6siv-201471674421.us-east5.run.app | Auto   | Proxied (Orange Cloud)
+  CNAME | orders      | ais-pre-dlxtcm22exfd5ssxaa6siv-201471674421.us-east5.run.app | Auto   | Proxied (Orange Cloud)
+  CNAME | telemetry   | ais-pre-dlxtcm22exfd5ssxaa6siv-201471674421.us-east5.run.app | Auto   | DNS Only
+
+-------------------------------------------------------------------
+3. TXT RECORDS (Security, Ownership, and verification)
+-------------------------------------------------------------------
+Required to verify domain ownership with GitHub Pages, Google Workspace/Cloud Run,
+and SSL Certificate provisioning.
+
+  Type  | Name (Host)                        | TXT Value / Payload
+  ------|------------------------------------|---------------------------------------------------------
+  TXT   | @                                  | google-site-verification=n7ECyUmQagKB2NSjhm0UWuVnhhvYdxWQH5ez_l2F75w
+  TXT   | _github-pages-challenge-hacyberg   | 5e5eb25cd8f21d0db947838ad2a49b
+  TXT   | @                                  | v=spf1 include:_spf.mx.cloudflare.net ~all
+
+-------------------------------------------------------------------
+4. DNSSEC & DS RECORDS (Domain Trust)
+-------------------------------------------------------------------
+Add this record to your domain registrar to enable cryptographic authenticity (DNSSEC):
+
+  Host/Name: hacyber-global.github.io.
+  TTL:       3600
+  Type:      DS (Delegation Signer)
+  Value:     3600 IN DS 2371 13 2 5b6a1d86b8a3e496aacecdcab2b645099d064941
+
+===================================================================
+                     CONFIG SYNCHRONIZATION
+===================================================================
+Once added, go to the "Domain, CNAME & Nameserver Sync Panel" under your HGT 
+Dashboard to run the dynamic verification check. The cluster will query these 
+records in real-time to spin up SSL configurations.

@@ -1,0 +1,24 @@
+{
+  "name": "HACYBERGLOBAL Spark Bot",
+  "short_name": "HGT Spark Bot",
+  "description": "Premium High-Frequency Spark Order Bot Simulator & Alerts Desk",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0c",
+  "theme_color": "#00f2ff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

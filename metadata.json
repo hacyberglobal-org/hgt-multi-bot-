@@ -1,0 +1,6 @@
+{
+  "name": "HGT Multi-Bot",
+  "description": "An educational live multi-bot dispatch simulator and automatic accept clicker supporting multiple gig networks (Walmart Spark, Instacart, DoorDash, Amazon Flex, Uber, Shipt, Roadie), featuring high-fidelity signup dashboards, bot activation license checkouts, and custom GPS geofencing.",
+  "requestFramePermissions": ["microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
