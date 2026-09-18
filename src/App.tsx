@@ -37,6 +37,8 @@ import { generateConnectionAuditPdf, generateDashboardSummaryPdf } from './lib/p
 import GlobalSearchModal from './components/GlobalSearchModal';
 import HeaderThemeSwitcher from './components/HeaderThemeSwitcher';
 import { GoogleDriveIntegration } from './components/GoogleDriveIntegration';
+import { AuthorizedIntegrations } from './components/AuthorizedIntegrations';
+import { GoogleWorkspaceHub } from './components/GoogleWorkspaceHub';
 import { ShieldCheck, Laptop, Wifi, Radio, RefreshCw, AlertOctagon, HelpCircle, Copy, Check, Globe, Sliders, QrCode, Bell, Bot, Box, History, Activity, Zap, X, Download, Battery, BatteryCharging, BatteryWarning, Cpu, Layers, Terminal, Search, Sun, Moon, Wallet, Volume2, VolumeX, CreditCard, Phone, Cloud, FileText, Trash2, Palette, FileSpreadsheet, MessageSquare, Car, UserCheck, HardDrive } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -178,7 +180,7 @@ export default function App() {
   const [metaAiLastSync, setMetaAiLastSync] = useState<string>('2026-08-05 17:07 UTC');
   const [isTestingMetaAi, setIsTestingMetaAi] = useState<boolean>(false);
 
-  const [brandingTab, setBrandingTab] = useState<'domain' | 'paypal' | 'stripe' | 'deposit' | 'alerts' | 'devices' | 'orderRequest' | 'payloader' | 'clientHq' | 'wallet' | 'voice' | 'connect' | 'deploy' | 'chat' | 'drivers' | 'botGrabber' | 'drive'>('botGrabber');
+  const [brandingTab, setBrandingTab] = useState<'domain' | 'paypal' | 'stripe' | 'deposit' | 'alerts' | 'devices' | 'orderRequest' | 'payloader' | 'clientHq' | 'wallet' | 'voice' | 'connect' | 'deploy' | 'chat' | 'drivers' | 'botGrabber' | 'drive' | 'integrations' | 'workspace'>('workspace');
   const [feedTab, setFeedTab] = useState<'live' | 'history'>('live');
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
@@ -3473,6 +3475,32 @@ export default function App() {
                         <HardDrive className="w-2.5 h-2.5 shrink-0 text-blue-400" />
                         <span>16. GOOGLE DRIVE</span>
                       </button>
+                      <button
+                        type="button"
+                        id="branding-tab-integrations-btn"
+                        onClick={() => setBrandingTab('integrations')}
+                        className={`flex-1 min-w-[155px] flex items-center justify-center gap-1 py-1.5 rounded-lg text-[8.5px] font-mono font-bold transition-all hover:shadow-[0_0_10px_rgba(59,130,246,0.4)] cursor-pointer ${
+                          brandingTab === 'integrations'
+                            ? 'bg-blue-600 text-white shadow-md font-extrabold'
+                            : 'bg-neutral-950/40 bg-blue-500/10 hover:bg-neutral-850 text-blue-300 hover:text-white border border-blue-500/40'
+                        }`}
+                      >
+                        <ShieldCheck className="w-2.5 h-2.5 shrink-0 text-blue-400" />
+                        <span>17. AUTHORIZED INTEGRATIONS</span>
+                      </button>
+                      <button
+                        type="button"
+                        id="branding-tab-workspace-btn"
+                        onClick={() => setBrandingTab('workspace')}
+                        className={`flex-1 min-w-[170px] flex items-center justify-center gap-1 py-1.5 rounded-lg text-[8.5px] font-mono font-bold transition-all hover:shadow-[0_0_10px_rgba(59,130,246,0.4)] cursor-pointer ${
+                          brandingTab === 'workspace'
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md font-extrabold'
+                            : 'bg-neutral-950/40 bg-blue-500/10 hover:bg-neutral-850 text-blue-300 hover:text-white border border-blue-500/40'
+                        }`}
+                      >
+                        <HardDrive className="w-2.5 h-2.5 shrink-0 text-blue-400" />
+                        <span>18. GOOGLE WORKSPACE & CLOUD SQL</span>
+                      </button>
                     </div>
 
                     {brandingTab === 'domain' ? (
@@ -4032,6 +4060,13 @@ export default function App() {
                         systemLogs={logs}
                         onLogEvent={(type, msg, comp) => addLog(type, msg, undefined, comp)}
                       />
+                    ) : brandingTab === 'integrations' ? (
+                      <AuthorizedIntegrations
+                        onLogEvent={(type, msg, comp) => addLog(type as any, msg, undefined, comp)}
+                        currentUserId="usr_hgt_operator_01"
+                      />
+                    ) : brandingTab === 'workspace' ? (
+                      <GoogleWorkspaceHub />
                     ) : (
                       <ClientHq onAddLog={addLog} activeDomain={activeDomain} />
                     )}

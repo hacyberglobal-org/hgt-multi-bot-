@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile registered through Firebase Authentication",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase UID" },
+        "email": { "type": "string", "description": "Email address" },
+        "displayName": { "type": "string", "description": "Display name" },
+        "photoUrl": { "type": "string", "description": "Profile picture URL" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "BotConfig": {
+      "title": "BotConfig",
+      "description": "User-specific bot grabber configuration settings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "minPay": { "type": "number", "description": "Minimum offer pay amount" },
+        "maxDistance": { "type": "number", "description": "Maximum mileage distance" },
+        "activePlatforms": { "type": "string", "description": "JSON array of enabled platforms" },
+        "autoAccept": { "type": "boolean", "description": "Whether auto accept clicker is enabled" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notifications and alert history",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Recipient user ID" },
+        "title": { "type": "string", "description": "Notification title" },
+        "message": { "type": "string", "description": "Notification body" },
+        "type": { "type": "string", "enum": ["info", "success", "warning", "error"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User account documents"
+    },
+    "/users/{userId}/bot_configs/{configId}": {
+      "schema": "BotConfig",
+      "description": "User custom bot parameters"
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notification logs"
+    }
+  }
+}

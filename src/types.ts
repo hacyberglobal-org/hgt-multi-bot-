@@ -285,3 +285,86 @@ export interface BotGrabberSimulationOffer {
   status: 'available' | 'evaluating' | 'grabbed_safe' | 'rejected_filter' | 'expired';
   reason?: string;
 }
+
+// -------------------------------------------------------------
+// ARGYLE AUTHORIZED GIG PLATFORM INTEGRATION DATA MODELS
+// -------------------------------------------------------------
+
+export type ArgyleVerificationState =
+  | 'REQUESTED'
+  | 'LINK_OPENED'
+  | 'CONNECTING'
+  | 'CONNECTED'
+  | 'DATA_RETRIEVING'
+  | 'DATA_AVAILABLE'
+  | 'VERIFICATION_READY'
+  | 'CONNECTION_FAILED'
+  | 'USER_CANCELLED'
+  | 'REQUIRES_RECONNECT'
+  | 'PLATFORM_UNAVAILABLE';
+
+export type ArgyleTargetPlatformKey =
+  | 'uber'
+  | 'lyft'
+  | 'doordash'
+  | 'instacart'
+  | 'spark_driver';
+
+export interface ArgyleFieldCoverage {
+  identities?: boolean;
+  gigs?: boolean;
+  payouts?: boolean;
+  vehicles?: boolean;
+  ratings?: boolean;
+  documents?: boolean;
+}
+
+export interface ArgylePlatformMetadata {
+  platformKey: ArgyleTargetPlatformKey;
+  displayName: string;
+  category: 'rideshare' | 'food_delivery' | 'grocery_logistics';
+  icon: string;
+  candidateSearchTerms: string[];
+  argyleItemId?: string;
+  isCoverageConfirmed: boolean;
+  coverageDetailsNote: string;
+  supportedDataSets: ArgyleFieldCoverage;
+  healthStatus: 'healthy' | 'issues' | 'unavailable' | 'unconfirmed';
+}
+
+export interface MinimumVerifiedDataSummary {
+  verifiedLegalName?: string;
+  platformWorkerStatus?: string;
+  verificationGrade?: 'TIER_1_VERIFIED' | 'TIER_2_PROVISIONAL' | 'UNVERIFIED';
+  verifiedPlatformName?: string;
+  accountCreatedDate?: string;
+  maskedPhone?: string;
+  maskedEmail?: string;
+  completedTripsCount?: number;
+  verifiedVehicle?: string;
+  lastSyncTimestamp?: string;
+  dataFieldsReceived?: string[];
+}
+
+export interface VerificationRequest {
+  verification_request_id: string;
+  customer_user_id: string;
+  argyle_user_id?: string;
+  argyle_item_id?: string;
+  platform: string;
+  platform_key: ArgyleTargetPlatformKey;
+  connection_status: 'idle' | 'connected' | 'disconnected' | 'failed';
+  verification_status: ArgyleVerificationState;
+  user_token?: string; // Ephemeral 1-hour token for Link SDK
+  created_at: string;
+  updated_at: string;
+  user_consent_accepted: boolean;
+  consent_timestamp?: string;
+  available_fields?: ArgyleFieldCoverage;
+  verified_data?: MinimumVerifiedDataSummary;
+  audit_trail: Array<{
+    timestamp: string;
+    event: string;
+    details?: string;
+  }>;
+}

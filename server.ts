@@ -1,11 +1,30 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import Stripe from "stripe";
 import dns from "dns";
 import { GoogleGenAI } from "@google/genai";
 import { getSupabaseClient, checkSupabaseHealth } from "./src/lib/supabaseClient";
+import {
+  getArgyleConfig,
+  getPlatformMetadataList,
+  getPlatformMetadata,
+  createVerificationRequest,
+  getVerificationRequest,
+  getAllVerificationRequests,
+  updateVerificationRequestStatus,
+  attachVerifiedData,
+  createArgyleUser,
+  createArgyleUserToken,
+  syncArgyleItemCoverage,
+  verifyArgyleWebhookSignature,
+  simulateSandboxLifecycle
+} from "./src/lib/argyleService";
+import { ArgyleTargetPlatformKey, ArgyleVerificationState } from "./src/types";
+import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
+import { getOrCreateUser, getUserProfile, logUserActivity, getUserActivityLogs } from "./src/db/users.ts";
 
 dotenv.config({ override: true });
 
@@ -42,7 +61,62 @@ async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-  app.use(express.json());
+  app.use(express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    }
+  }));
+
+  // POST /api/user/sync - Cloud SQL User Sync via Firebase ID token
+  app.post("/api/user/sync", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const uid = req.user?.uid;
+      const email = req.user?.email || req.body.email || "user@example.com";
+      const displayName = req.body.displayName || (req.user as any)?.name;
+      const photoUrl = req.body.photoUrl || (req.user as any)?.picture;
+
+      if (!uid) {
+        return res.status(400).json({ error: "Missing user UID in verified token" });
+      }
+
+      const user = await getOrCreateUser(uid, email, displayName, photoUrl);
+      await logUserActivity(uid, "USER_LOGIN", "google_workspace", `User ${email} synced to Cloud SQL`);
+      res.json({ ok: true, user });
+    } catch (error: any) {
+      console.error("Failed to sync user to Cloud SQL:", error);
+      res.status(500).json({ error: error.message || "Failed to sync user to Cloud SQL" });
+    }
+  });
+
+  // GET /api/user/profile - Fetch Cloud SQL User Profile
+  app.get("/api/user/profile", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const uid = req.user?.uid;
+      if (!uid) {
+        return res.status(400).json({ error: "Missing user UID" });
+      }
+      const profile = await getUserProfile(uid);
+      res.json({ ok: true, profile });
+    } catch (error: any) {
+      console.error("Failed to fetch profile:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch profile" });
+    }
+  });
+
+  // GET /api/user/activity - Fetch Activity Logs for User
+  app.get("/api/user/activity", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const uid = req.user?.uid;
+      if (!uid) {
+        return res.status(400).json({ error: "Missing user UID" });
+      }
+      const logs = await getUserActivityLogs(uid);
+      res.json({ ok: true, logs });
+    } catch (error: any) {
+      console.error("Failed to fetch activity logs:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch activity logs" });
+    }
+  });
 
   app.post("/api/cloudflare/kv", async (req, res) => {
     const accountId = req.body.accountId || process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -2809,6 +2883,203 @@ Operator Query: ${prompt || 'Perform full diagnostic review on jitter, grab rate
     res.json({ ok: true, count: sanitized.length, leads: sanitized });
   });
 
+  // ==========================================================================
+  // ARGYLE AUTHORIZED GIG-PLATFORM VERIFICATION API ROUTES
+  // ==========================================================================
+
+  // 1. Argyle Public Configuration & Environment status
+  app.get("/api/argyle/config", (_req, res) => {
+    const config = getArgyleConfig();
+    res.json({
+      ok: true,
+      environment: config.environment,
+      hasApiKeyId: Boolean(config.apiKeyId),
+      hasApiKeySecret: Boolean(config.apiKeySecret),
+      hasWebhookSecret: Boolean(config.webhookSecret),
+      baseUrl: config.baseUrl,
+      isConfigured: Boolean(config.apiKeyId && config.apiKeySecret)
+    });
+  });
+
+  // 2. Argyle Platforms & Coverage Listing (Requirement 9 & 21)
+  app.get("/api/argyle/platforms", async (req, res) => {
+    const shouldSync = req.query.sync === 'true';
+    if (shouldSync) {
+      const keys: ArgyleTargetPlatformKey[] = ['uber', 'lyft', 'doordash', 'instacart', 'spark_driver'];
+      for (const k of keys) {
+        await syncArgyleItemCoverage(k);
+      }
+    }
+    const platforms = getPlatformMetadataList();
+    res.json({
+      ok: true,
+      platforms,
+      total: platforms.length,
+      note: "Field coverage must be confirmed by Argyle API Item discovery or verified sandbox configuration before being considered fully available."
+    });
+  });
+
+  // 3. Initiate Verification Workflow (Requirement 10 & 15)
+  app.post("/api/argyle/verification/start", async (req, res) => {
+    try {
+      const { customerUserId, platformKey, userConsentAccepted } = req.body;
+
+      if (!customerUserId || typeof customerUserId !== 'string') {
+        return res.status(400).json({ ok: false, error: "customerUserId is required" });
+      }
+
+      if (!platformKey || !getPlatformMetadata(platformKey as ArgyleTargetPlatformKey)) {
+        return res.status(400).json({ ok: false, error: "Invalid or unsupported platformKey" });
+      }
+
+      // Requirement 15: Mandatory user consent verification
+      if (userConsentAccepted !== true) {
+        return res.status(400).json({
+          ok: false,
+          error: "Explicit voluntary user authorization is required. The customer must authorize Argyle to connect to the specified platform and share permitted information with HACYBERGLOBATECH."
+        });
+      }
+
+      // Create Argyle user and ephemeral user token server-side (never expose API secret to client)
+      const userRes = await createArgyleUser(customerUserId.trim());
+      let userToken = userRes.userToken;
+
+      if (!userToken && userRes.argyleUserId) {
+        const tokenRes = await createArgyleUserToken(userRes.argyleUserId);
+        userToken = tokenRes.userToken;
+      }
+
+      const platformMeta = getPlatformMetadata(platformKey as ArgyleTargetPlatformKey);
+
+      const verificationReq = createVerificationRequest({
+        customerUserId: customerUserId.trim(),
+        platformKey: platformKey as ArgyleTargetPlatformKey,
+        userConsentAccepted: true,
+        userToken: userToken,
+        argyleUserId: userRes.argyleUserId,
+        argyleItemId: platformMeta?.argyleItemId
+      });
+
+      res.status(201).json({
+        ok: true,
+        verificationRequestId: verificationReq.verification_request_id,
+        argyleUserId: verificationReq.argyle_user_id,
+        userToken: verificationReq.user_token,
+        platform: verificationReq.platform,
+        status: verificationReq.verification_status,
+        request: verificationReq
+      });
+    } catch (err: any) {
+      console.error("Argyle verification initiation failed:", err?.message || err);
+      res.status(500).json({
+        ok: false,
+        error: "Failed to initiate Argyle verification workflow",
+        details: err?.message || "Unknown error"
+      });
+    }
+  });
+
+  // 4. Verification Status Query (Requirement 10 & 14)
+  app.get("/api/argyle/verification/status", (req, res) => {
+    const requestId = req.query.requestId as string | undefined;
+    const customerUserId = req.query.customerUserId as string | undefined;
+
+    if (requestId) {
+      const record = getVerificationRequest(requestId);
+      if (!record) {
+        return res.status(404).json({ ok: false, error: "Verification request not found" });
+      }
+      return res.json({ ok: true, verification: record });
+    }
+
+    const records = getAllVerificationRequests(customerUserId);
+    res.json({ ok: true, count: records.length, verifications: records });
+  });
+
+  // 5. Client Link State Transitions (LINK_OPENED, CONNECTING, USER_CANCELLED, CONNECTION_FAILED)
+  app.post("/api/argyle/verification/state-update", (req, res) => {
+    const { requestId, state, details } = req.body;
+    if (!requestId || !state) {
+      return res.status(400).json({ ok: false, error: "requestId and state are required" });
+    }
+
+    const updated = updateVerificationRequestStatus(requestId, state as ArgyleVerificationState, details);
+    if (!updated) {
+      return res.status(404).json({ ok: false, error: "Verification request not found" });
+    }
+
+    res.json({ ok: true, verification: updated });
+  });
+
+  // 6. Webhook Endpoint with Signature Verification (Requirement 10 & 11)
+  app.post("/api/argyle/webhook", (req, res) => {
+    const signatureHeader = req.headers["x-argyle-signature"] || req.headers["argyle-signature"] || req.headers["x-signature-sha256"];
+    const rawBody = (req as any).rawBody || JSON.stringify(req.body);
+
+    const isValid = verifyArgyleWebhookSignature(rawBody, signatureHeader as string | string[] | undefined);
+
+    if (!isValid) {
+      console.warn("Argyle webhook signature verification rejected.");
+      return res.status(401).json({
+        ok: false,
+        error: "Unauthorized: Webhook signature verification failed or missing."
+      });
+    }
+
+    const event = req.body;
+    const eventType = event?.event || event?.type || 'unknown';
+    const eventData = event?.data || {};
+    const userId = eventData?.user || eventData?.user_id || event?.user;
+    const accountId = eventData?.account || eventData?.account_id;
+
+    console.log(`[ARGYLE WEBHOOK] Authenticated event received: ${eventType} (User: ${userId || 'n/a'})`);
+
+    // Find any matching verification request for this user
+    if (userId) {
+      const allRequests = getAllVerificationRequests();
+      const match = allRequests.find((r) => r.argyle_user_id === userId);
+      if (match) {
+        if (eventType === 'accounts.connected' || eventType === 'account.connected') {
+          updateVerificationRequestStatus(match.verification_request_id, 'CONNECTED', `Argyle account ${accountId || ''} successfully linked.`);
+          setTimeout(() => {
+            updateVerificationRequestStatus(match.verification_request_id, 'DATA_RETRIEVING', 'Retrieving permitted employment and gig data fields.');
+          }, 1500);
+        } else if (eventType.includes('updated') || eventType.includes('completed') || eventType === 'identities.added') {
+          updateVerificationRequestStatus(match.verification_request_id, 'DATA_AVAILABLE', `Data indexed for ${eventType}`);
+          // Attach minimum necessary verified attributes
+          attachVerifiedData(match.verification_request_id, {
+            verifiedLegalName: eventData?.first_name ? `${eventData.first_name} ${eventData.last_name || ''}`.trim() : match.verified_data?.verifiedLegalName || 'Authorized Worker',
+            platformWorkerStatus: 'ACTIVE_VERIFIED',
+            verificationGrade: 'TIER_1_VERIFIED',
+            verifiedPlatformName: match.platform,
+            lastSyncTimestamp: new Date().toISOString()
+          });
+        } else if (eventType === 'accounts.failed' || eventType === 'account.failed') {
+          updateVerificationRequestStatus(match.verification_request_id, 'CONNECTION_FAILED', 'Platform authorization failed.');
+        } else if (eventType === 'accounts.disconnected') {
+          updateVerificationRequestStatus(match.verification_request_id, 'REQUIRES_RECONNECT', 'Platform session expired; reconnection required.');
+        }
+      }
+    }
+
+    res.json({ ok: true, received: true, event: eventType });
+  });
+
+  // 7. Interactive Sandbox Simulator (Requirement 16 & 17)
+  app.post("/api/argyle/sandbox/simulate", (req, res) => {
+    const { requestId, targetState } = req.body;
+    if (!requestId || !targetState) {
+      return res.status(400).json({ ok: false, error: "requestId and targetState are required" });
+    }
+
+    const updated = simulateSandboxLifecycle(requestId, targetState as ArgyleVerificationState);
+    if (!updated) {
+      return res.status(404).json({ ok: false, error: "Verification request not found" });
+    }
+
+    res.json({ ok: true, verification: updated });
+  });
+
   // 5. Hostname & Route-based Delivery for Support & Lead Center
   app.get(['/support', '/portal', '/leads', '/activation'], (req, res) => {
     const portalPath = path.join(process.cwd(), 'public', 'portal.html');
@@ -2821,6 +3092,17 @@ Operator Query: ${prompt || 'Perform full diagnostic review on jitter, grab rate
     if (host.startsWith('support.') && (req.path === '/' || req.path === '/index.html')) {
       const portalPath = path.join(process.cwd(), 'public', 'portal.html');
       return res.sendFile(portalPath);
+    }
+    next();
+  });
+
+  // Google Search Console & site verification file static route
+  app.get(['/google:id.html', '/:id.html'], (req, res, next) => {
+    const fileName = req.path.replace(/^\//, '');
+    const candidatePath = path.join(process.cwd(), 'public', fileName);
+    if (fs.existsSync(candidatePath)) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.sendFile(candidatePath);
     }
     next();
   });
