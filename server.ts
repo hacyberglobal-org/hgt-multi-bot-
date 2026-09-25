@@ -67,6 +67,74 @@ async function startServer() {
     }
   }));
 
+  // GET /api/health - Instant System Health Check
+  app.get("/api/health", (_req, res) => {
+    const memory = process.memoryUsage();
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      uptime: Math.floor(process.uptime()),
+      memory: {
+        rssMb: Math.round((memory.rss / 1024 / 1024) * 10) / 10,
+        heapUsedMb: Math.round((memory.heapUsed / 1024 / 1024) * 10) / 10,
+        heapTotalMb: Math.round((memory.heapTotal / 1024 / 1024) * 10) / 10
+      },
+      nodeVersion: process.version,
+      brand: "HACYBERGLOBATECH",
+      owner: "GODFADA"
+    });
+  });
+
+  // GET /api/system/status - Comprehensive platform diagnostics
+  app.get("/api/system/status", (_req, res) => {
+    const mem = process.memoryUsage();
+    const hasTelegram = Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_BOT_TOKEN.trim() !== "");
+    const hasCloudflare = Boolean(process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_API_TOKEN.trim() !== "");
+    const hasGemini = Boolean(process.env.GEMINI_API_KEY || process.env.CONSOLE_SECRET);
+    const hasStripe = Boolean(process.env.STRIPE_SECRET_KEY);
+    const hasArgyle = Boolean(process.env.ARGYLE_CLIENT_ID && process.env.ARGYLE_CLIENT_SECRET);
+
+    res.json({
+      ok: true,
+      service: "HACYBERGLOBATECH Engine & Activation Support Center",
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: Math.floor(process.uptime()),
+      environment: process.env.NODE_ENV || "development",
+      integrations: {
+        cloudflare: {
+          configured: hasCloudflare,
+          tokenId: process.env.CLOUDFLARE_TOKEN_ID || "2966e15e0df3b4d3a747d6e0efb7802c",
+          edgeDomain: "orders.hacyberglobal.dgdns.org"
+        },
+        telegram: {
+          configured: hasTelegram,
+          status: hasTelegram ? "ONLINE_ACTIVE" : "STANDBY"
+        },
+        geminiAi: {
+          configured: hasGemini,
+          model: "gemini-3.8-flash"
+        },
+        stripe: {
+          configured: hasStripe,
+          mode: process.env.STRIPE_SECRET_KEY?.startsWith("sk_live") ? "live" : "test"
+        },
+        argyle: {
+          configured: hasArgyle,
+          mode: process.env.ARGYLE_ENV || "sandbox"
+        }
+      },
+      system: {
+        memoryMb: {
+          rss: Math.round((mem.rss / 1024 / 1024) * 10) / 10,
+          heapUsed: Math.round((mem.heapUsed / 1024 / 1024) * 10) / 10,
+          heapTotal: Math.round((mem.heapTotal / 1024 / 1024) * 10) / 10
+        },
+        nodeVersion: process.version,
+        platform: process.platform
+      }
+    });
+  });
+
   // POST /api/user/sync - Cloud SQL User Sync via Firebase ID token
   app.post("/api/user/sync", requireAuth, async (req: AuthRequest, res) => {
     try {
@@ -300,6 +368,61 @@ async function startServer() {
     }
   });
 
+  // REST Endpoint: Get Active Telegram Bot Info & Link
+  app.get("/api/telegram/bot-info", async (req, res) => {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const adminChatId = process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID;
+    const botAccessLink = process.env.BOT_ACCESS_LINK || "https://t.me/multi_grabber_system_bot";
+
+    if (!token || token.trim() === '') {
+      return res.json({
+        ok: true,
+        configured: false,
+        botUsername: "multi_grabber_system_bot",
+        botLink: botAccessLink,
+        status: "STANDBY_UNCONFIGURED",
+        message: "TELEGRAM_BOT_TOKEN not configured in environment vault. Defaulting to system grabber link."
+      });
+    }
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+      const data = await response.json();
+      if (data.ok && data.result) {
+        const username = data.result.username;
+        const liveBotLink = `https://t.me/${username}`;
+        return res.json({
+          ok: true,
+          configured: true,
+          botId: data.result.id,
+          botFirstName: data.result.first_name,
+          botUsername: username,
+          botLink: liveBotLink,
+          status: "ACTIVE_VERIFIED",
+          adminChatId: adminChatId ? String(adminChatId) : null
+        });
+      } else {
+        return res.json({
+          ok: true,
+          configured: false,
+          botUsername: "multi_grabber_system_bot",
+          botLink: botAccessLink,
+          status: "INVALID_TOKEN",
+          description: data.description || "Could not verify bot token"
+        });
+      }
+    } catch (e: any) {
+      return res.json({
+        ok: true,
+        configured: true,
+        botUsername: "multi_grabber_system_bot",
+        botLink: botAccessLink,
+        status: "PREVIEW_SIMULATED",
+        description: "Network sandbox prevented direct Telegram probe; using fallback active link."
+      });
+    }
+  });
+
   // REST Endpoint: List Receipts
   app.get("/api/telegram/receipts", (req, res) => {
     res.json(receiptStore);
@@ -525,7 +648,7 @@ async function startServer() {
         } else if (lowerText.startsWith("/dns")) {
           replyText = `🌐 *CLOUDFLARE DNS CONFIGURATION* 🌐\n\nNameserver 1: anirban.ns.cloudflare.com\nNameserver 2: cecelia.ns.cloudflare.com\nTXT verification: google-site-verification=n7ECyUmQagKB2NSjhm0UWuVnhhvYdxWQH5ez_l2F75w\nStatus: Sync completed.`;
         } else if (lowerText.startsWith("/payment_request") || lowerText.startsWith("/payment") || lowerText.startsWith("/pay") || lowerText.startsWith("/buy")) {
-          replyText = `💸 *SECURE CHECKOUT CREDENTIALS* 💸\n\nTo activate your Multi-Bot Dispatcher & bypass filters, submit your deposit of $130.00:\n\n- Zelle Payee: Godfrey N Joshua (zelle@hacyberglobal.dpdns.org)\n- PayPal Checkout: https://paypal.me/hacyber-global/130\n- Bitcoin address: 3QJ8yE7wU1fKAnF5sWpDHezB39P4Jp8YgD\n\nAfter payment, send receipt photo to this bot. Our team will verify and issue your access link!`;
+          replyText = `💸 *SECURE CHECKOUT CREDENTIALS* 💸\n\nTo activate your Multi-Bot Dispatcher & bypass filters, submit your deposit of $130.00:\n\n- Zelle Payee: Godfrey N Joshua (zelle@hacyberglobal.dpdns.org)\n- Bitcoin address: 3QJ8yE7wU1fKAnF5sWpDHezB39P4Jp8YgD\n\nAfter payment, send receipt photo to this bot. Our team will verify and issue your access link!`;
         } else if (lowerText.startsWith("/license")) {
           const parts = text.split(" ");
           if (parts.length > 1) {

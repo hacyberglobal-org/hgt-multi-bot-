@@ -496,11 +496,10 @@
                 <label>Select Payment Method</label>
                 <select id="paymentMethod" required onchange="showPaymentDetails(this.value)">
                     <option value="Zelle">1. Zelle Payee Routing</option>
-                    <option value="PayPal">2. PayPal Direct Checkout</option>
-                    <option value="Bitcoin">3. Bitcoin (BTC) Crypto Wallet</option>
-                    <option value="Lead Bank Transfer">4. Lead Bank Transfer</option>
-                    <option value="USDT">5. USDT (TRC-20 Crypto)</option>
-                    <option value="Ethereum">6. Ethereum (ETH Crypto)</option>
+                    <option value="Bitcoin">2. Bitcoin (BTC) Crypto Wallet</option>
+                    <option value="Lead Bank Transfer">3. Lead Bank Transfer</option>
+                    <option value="USDT">4. USDT (TRC-20 Crypto)</option>
+                    <option value="Ethereum">5. Ethereum (ETH Crypto)</option>
                 </select>
             </div>
 
@@ -563,13 +562,6 @@
                     <button type="button" id="copyZelle" class="copy-btn" onclick="copyToClipboard('${zelleAddr}', 'copyZelle')">COPY</button>
                 </div>
                 <p>Send <strong>$130.00 USD</strong> directly via your banking app's Zelle feature and upload the receipt screenshot below.</p>
-            `;
-        } else if (method === 'PayPal') {
-            html = `
-                <h4>💳 PayPal Direct Checkout</h4>
-                <p><strong>Direct Invoice / Payment Link:</strong></p>
-                <p style="margin-top: 6px;"><a href="https://paypal.me/hacyber-global/130" target="_blank" style="color: var(--primary); font-weight: bold; text-decoration: underline;">https://paypal.me/hacyber-global/130</a></p>
-                <a href="https://paypal.me/hacyber-global/130" target="_blank" class="action-link-btn" style="background: linear-gradient(90deg, #003087, #0079C1);">💳 Pay $130.00 via PayPal</a>
             `;
         } else if (method === 'Bitcoin') {
             const btcAddr = '3QJ8yE7wU1fKAnF5sWpDHezB39P4Jp8YgD';

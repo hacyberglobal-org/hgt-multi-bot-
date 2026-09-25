@@ -53,8 +53,29 @@ export default function SystemHealthSnapshot({ onAddLog }: SystemHealthSnapshotP
     { id: 9, name: 'Google AI Studio Console Vault', status: 'ACTIVE', latencyMs: 6, tasksCompleted: 3410 },
   ]);
 
-  // Periodic metric jitter simulation
+  // Periodic metric jitter and real API health poll
   useEffect(() => {
+    // Immediate real API health fetch
+    const fetchRealStatus = async () => {
+      try {
+        const res = await fetch('/api/system/status');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.system?.memoryMb?.rss) {
+            setMemoryUsedMb(data.system.memoryMb.rss);
+          }
+          if (data.uptimeSeconds) {
+            setUptimeSeconds(data.uptimeSeconds);
+          }
+          setLastRefreshed(new Date().toLocaleTimeString());
+        }
+      } catch {
+        // Fallback to internal telemetry
+      }
+    };
+
+    fetchRealStatus();
+
     const interval = setInterval(() => {
       // Uptime increment
       setUptimeSeconds(prev => prev + 2);
@@ -62,7 +83,6 @@ export default function SystemHealthSnapshot({ onAddLog }: SystemHealthSnapshotP
       // CPU Jitter
       setCpuUsage(prev => {
         const delta = isSimulatingLoad ? (Math.random() * 8 - 1) : (Math.random() * 4 - 2);
-        const base = isSimulatingLoad ? 68 : 24;
         const next = Math.max(12, Math.min(isSimulatingLoad ? 94 : 48, prev + delta));
         const rounded = Math.round(next * 10) / 10;
         

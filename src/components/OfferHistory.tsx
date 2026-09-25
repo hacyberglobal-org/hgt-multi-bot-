@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SparkOffer } from '../types';
-import { ShoppingBag, Truck, Box, RotateCcw, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle, Trash2 } from 'lucide-react';
+import { ShoppingBag, Truck, Box, RotateCcw, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertTriangle, Trash2, Download, Check } from 'lucide-react';
 
 interface OfferHistoryProps {
   offers: SparkOffer[];
@@ -13,6 +13,7 @@ export default function OfferHistory({ offers, onReplay, onDeleteOffers }: Offer
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedOfferId, setExpandedOfferId] = useState<string | null>(null);
   const [selectedOfferIds, setSelectedOfferIds] = useState<string[]>([]);
+  const [isExported, setIsExported] = useState(false);
   const itemsPerPage = 6;
 
   const toggleSelectOffer = (id: string) => {
@@ -35,6 +36,89 @@ export default function OfferHistory({ offers, onReplay, onDeleteOffers }: Offer
       onDeleteOffers(selectedOfferIds);
     }
     setSelectedOfferIds([]);
+  };
+
+  const handleExportCSV = () => {
+    if (historyOffers.length === 0) return;
+
+    const exportItems = selectedOfferIds.length > 0
+      ? historyOffers.filter(o => selectedOfferIds.includes(o.id))
+      : historyOffers;
+
+    const headers = [
+      'Offer ID',
+      'Platform',
+      'Store / Merchant Name',
+      'Store Number',
+      'Order Type',
+      'Status',
+      'Handled By',
+      'Total Pay ($)',
+      'Base Pay ($)',
+      'Tip ($)',
+      'Distance (miles)',
+      'Pay Per Mile ($/mi)',
+      'Items Count',
+      'Reaction Time (ms)',
+      'Created Date & Time',
+      'Expiration Date & Time'
+    ];
+
+    const escapeCsvValue = (value: string | number | undefined | null): string => {
+      if (value === null || value === undefined) return '""';
+      const str = String(value);
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return `"${str}"`;
+    };
+
+    const rows = exportItems.map(o => {
+      const payPerMile = o.distance > 0 ? (o.totalPay / o.distance).toFixed(2) : '0.00';
+      const createdStr = o.createdAt ? new Date(o.createdAt).toLocaleString() : '';
+      const expiresStr = o.expiresAt ? new Date(o.expiresAt).toLocaleString() : '';
+      const handledBy = o.acceptedBy === 'bot'
+        ? 'Bot Auto-Clicker'
+        : o.acceptedBy === 'manual'
+        ? 'Manual Tapping'
+        : o.acceptedBy === 'competitor'
+        ? 'Competitor'
+        : 'N/A';
+
+      return [
+        escapeCsvValue(o.id),
+        escapeCsvValue(o.platform || 'Spark'),
+        escapeCsvValue(o.storeName),
+        escapeCsvValue(o.storeNumber),
+        escapeCsvValue(o.type),
+        escapeCsvValue(o.status.toUpperCase()),
+        escapeCsvValue(handledBy),
+        escapeCsvValue(o.totalPay?.toFixed(2) ?? '0.00'),
+        escapeCsvValue(o.basePay?.toFixed(2) ?? '0.00'),
+        escapeCsvValue(o.tip?.toFixed(2) ?? '0.00'),
+        escapeCsvValue(o.distance?.toFixed(1) ?? '0.0'),
+        escapeCsvValue(payPerMile),
+        escapeCsvValue(o.itemsCount ?? 0),
+        escapeCsvValue(o.acceptTimeMs ?? 'N/A'),
+        escapeCsvValue(createdStr),
+        escapeCsvValue(expiresStr)
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.setAttribute('download', `hgt_dispatch_records_${dateStamp}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setIsExported(true);
+    setTimeout(() => setIsExported(false), 2000);
   };
 
   const toggleExpand = (id: string) => {
@@ -133,7 +217,44 @@ export default function OfferHistory({ offers, onReplay, onDeleteOffers }: Offer
             <span className="text-sm font-sans font-medium text-white uppercase tracking-wider">Offer History Log</span>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Export as CSV Button */}
+            <button
+              id="export-csv-offers-btn"
+              onClick={handleExportCSV}
+              disabled={historyOffers.length === 0}
+              className={`px-2.5 py-1 rounded text-[10px] font-mono font-medium transition-all flex items-center gap-1.5 cursor-pointer border ${
+                historyOffers.length === 0
+                  ? 'bg-neutral-950 text-neutral-600 border-neutral-800 cursor-not-allowed'
+                  : isExported
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                  : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/30 hover:border-blue-500/50 active:scale-95'
+              }`}
+              title={
+                historyOffers.length === 0
+                  ? 'No dispatch records available to export'
+                  : selectedOfferIds.length > 0
+                  ? `Download ${selectedOfferIds.length} selected dispatch records as CSV`
+                  : 'Download all dispatch records as CSV for external analysis'
+              }
+            >
+              {isExported ? (
+                <>
+                  <Check className="w-3 h-3 text-emerald-400" />
+                  <span>Downloaded!</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3 h-3" />
+                  <span>
+                    {selectedOfferIds.length > 0
+                      ? `Export as CSV (${selectedOfferIds.length})`
+                      : 'Export as CSV'}
+                  </span>
+                </>
+              )}
+            </button>
+
             {selectedOfferIds.length > 0 && (
               <button
                 id="batch-delete-offers-btn"

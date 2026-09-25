@@ -51,6 +51,24 @@ export default function TelegramBotSetup({
     return initialChatId || localStorage.getItem('spark_bot_tg_chat_id') || '';
   });
 
+  // Official bot link state with local storage fallback
+  const [activeBotLink, setActiveBotLink] = useState(() => {
+    return localStorage.getItem('spark_bot_active_link') || 'https://t.me/multi_grabber_system_bot';
+  });
+
+  // Query server to get live active bot link from environment vault
+  useEffect(() => {
+    fetch('/api/telegram/bot-info')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.botLink) {
+          setActiveBotLink(data.botLink);
+          localStorage.setItem('spark_bot_active_link', data.botLink);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Dual bot setup state: Customer Support & Billing Bot configuration
   const [billingToken, setBillingToken] = useState(() => {
     const saved = localStorage.getItem('spark_bot_billing_token');
@@ -67,12 +85,12 @@ export default function TelegramBotSetup({
     return '8676025127';
   });
 
-  // Bitcoin Account & PayPal Configuration states
+  // Bitcoin Account & Zelle Routing Configuration states
   const [bitcoinAddress, setBitcoinAddress] = useState(() => {
     return localStorage.getItem('spark_bot_btc_address') || 'bc1qxy2kg3ut7nd673j6vfvjtpx6kwsyudh8t6fsp0';
   });
-  const [paypalLink, setPaypalLink] = useState(() => {
-    return localStorage.getItem('spark_bot_paypal_link') || 'https://paypal.me/hacyber-global/130';
+  const [zelleRoutingAddress, setZelleRoutingAddress] = useState(() => {
+    return localStorage.getItem('spark_bot_zelle_address') || 'zelle@hacyberglobal.dpdns.org';
   });
 
   // Sales and Usage Rules delivered automatically to customers
@@ -102,7 +120,7 @@ export default function TelegramBotSetup({
     id: string;
     customerHandle: string;
     customerPhone: string;
-    method: 'Bitcoin' | 'PayPal';
+    method: 'Bitcoin' | 'Zelle' | 'Stripe';
     amountText: string;
     status: 'pending' | 'approved' | 'declined';
     timestamp: string;
@@ -112,7 +130,15 @@ export default function TelegramBotSetup({
   const [receiptQueue, setReceiptQueue] = useState<ReceiptRecord[]>(() => {
     const saved = localStorage.getItem('spark_bot_receipt_queue');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+      try { 
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item: any) => ({
+            ...item,
+            method: item.method === 'PayPal' ? 'Zelle' : item.method
+          }));
+        }
+      } catch (e) {}
     }
     return [
       {
@@ -129,11 +155,11 @@ export default function TelegramBotSetup({
         id: 'rec_02',
         customerHandle: '@spark_king_atl',
         customerPhone: '+1 (404) 555-4921',
-        method: 'PayPal',
+        method: 'Zelle',
         amountText: '130.00',
         status: 'pending',
         timestamp: '18 min ago',
-        txHashOrProof: 'PAY_ID_8DX94820LK'
+        txHashOrProof: 'ZEL_REF_8DX94820LK'
       }
     ];
   });
@@ -156,8 +182,8 @@ export default function TelegramBotSetup({
   }, [bitcoinAddress]);
 
   useEffect(() => {
-    localStorage.setItem('spark_bot_paypal_link', paypalLink);
-  }, [paypalLink]);
+    localStorage.setItem('spark_bot_zelle_address', zelleRoutingAddress);
+  }, [zelleRoutingAddress]);
 
   useEffect(() => {
     localStorage.setItem('spark_bot_customer_rules', customerRules);
@@ -397,7 +423,7 @@ export default function TelegramBotSetup({
     const cleanAmount = parseFloat(paymentAmount || '130.00').toFixed(2);
     onAddLog('info', `💸 Webhook payment pipeline initialized. Dispatching deposit notification package of $${cleanAmount} USD securely...`, undefined, 'TG_PAY_SEND');
     
-    const paymentMsg = `💵 [𝐇𝐆𝐓-𝐁𝐎𝐓™️] DEPOSIT CONFIRMED & SYSTEM UNLOCKED!\n\n💼 Payer Platform: Walmart Spark Driver Auto-Accept Cluster\n💳 Payment Gateway: Flutterwave Webhook Intercept\n🏦 Account Bank: Lead Bank Checking\n💰 Amount Received: $${cleanAmount} USD\n📍 Custody Holder: ${payeeName} (#217061367039)\n🛠️ Installation Package: https://t.me/multi_grabber_system_bot\n\n🏁 Auto-Accept Listening Mode: [ACTIVE]\n⚡ Reaction Response Delay: 120ms\n🟢 Multi-Grabber system cleared. Click below to install your authorized mobile bot instance!`;
+    const paymentMsg = `💵 [𝐇𝐆𝐓-𝐁𝐎𝐓™️] DEPOSIT CONFIRMED & SYSTEM UNLOCKED!\n\n💼 Payer Platform: Walmart Spark Driver Auto-Accept Cluster\n💳 Payment Gateway: Flutterwave Webhook Intercept\n🏦 Account Bank: Lead Bank Checking\n💰 Amount Received: $${cleanAmount} USD\n📍 Custody Holder: ${payeeName} (#217061367039)\n🛠️ Installation Package: ${activeBotLink}\n\n🏁 Auto-Accept Listening Mode: [ACTIVE]\n⚡ Reaction Response Delay: 120ms\n🟢 Multi-Grabber system cleared. Click below to install your authorized mobile bot instance!`;
 
     try {
       const response = await fetch(`/api/telegram/send`, {
@@ -412,7 +438,7 @@ export default function TelegramBotSetup({
           reply_markup: {
             inline_keyboard: [
               [
-                { text: "📥 Click here to Install Multi-Grabber Bot", url: "https://t.me/multi_grabber_system_bot" }
+                { text: "📥 Click here to Install Multi-Grabber Bot", url: activeBotLink }
               ],
               [
                 { text: "⚡ Access Live Web interface Tracker", url: "https://hacyber-global.github.io/Bot.com/" }
@@ -460,7 +486,7 @@ export default function TelegramBotSetup({
         body: JSON.stringify({
           token: billingToken,
           chatId: billingChatId,
-          text: `🔔 [Billing & Lead Response Bot] Active Connection Confirmed!\n\nThis secondary Telegram bot is designated to receive consumer receipt proofs, send rules, and deliver PayPal ($) / Bitcoin solutions to driver leads.`
+          text: `🔔 [Billing & Lead Response Bot] Active Connection Confirmed!\n\nThis secondary Telegram bot is designated to receive consumer receipt proofs, send rules, and deliver Zelle ($) / Bitcoin solutions to driver leads.`
         })
       });
 
@@ -504,15 +530,15 @@ export default function TelegramBotSetup({
       `Hey there Lead! Here are your activation conditions to unlock your Spark Driver Bot License:\n\n` +
       `${customerRules}\n\n` +
       `💳 CHOOSE PAYMENT METHOD BELOW:\n` +
-      `1. PayPal Gateway Payout: $${parseFloat(paymentAmount).toFixed(2)}\n` +
+      `1. Zelle Payee Routing: $${parseFloat(paymentAmount).toFixed(2)}\n` +
       `2. Bitcoin Secure Address: $${parseFloat(paymentAmount).toFixed(2)}\n` +
       `3. Stripe Global Card Checkout: $${parseFloat(paymentAmount).toFixed(2)}\n\n` +
-      `🔑 WALLET COORDINATES:\n` +
+      `🔑 PAYMENT COORDINATES:\n` +
+      `• Zelle Payee Email: ${zelleRoutingAddress}\n` +
       `• BTC Wallet Address: ${bitcoinAddress}\n` +
-      `• PayPal Direct URL: ${paypalLink}\n` +
       `• Stripe Card URL: ${stripeCheckoutLink}\n\n` +
       `📣 ATTACH SUCCESSFUL RECEIPT PROOF TO THIS CHAT ONCE DONE.\n` +
-      `Upon receipt confirmation, the system manually evaluates transaction logs, verifies blockchain/Stripe/PayPal inputs, and dispatches your installation grabber link!`;
+      `Upon receipt confirmation, the system manually evaluates transaction logs, verifies blockchain/Stripe/Zelle inputs, and dispatches your installation grabber link!`;
 
     try {
       const response = await fetch(`/api/telegram/send`, {
@@ -528,7 +554,6 @@ export default function TelegramBotSetup({
             inline_keyboard: [
               [
                 { text: "💳 Stripe Credit Card", url: stripeCheckoutLink },
-                { text: "💸 PayPal Direct Link", url: paypalLink },
                 { text: "🪙 BTC Wallet Address", url: "https://blockchain.info/address/" + bitcoinAddress }
               ]
             ]
@@ -538,7 +563,7 @@ export default function TelegramBotSetup({
 
       const data = await response.json();
       if (data.ok) {
-        onAddLog('info', `✅ OUTREACH DISPATCHED! Customer rules, PayPal checkout, and Bitcoin wallet coordinates dispatched to ${prospectUsername} via billing bot.`, undefined, 'OUTREACH_OK');
+        onAddLog('info', `✅ OUTREACH DISPATCHED! Customer rules, Stripe checkout, and Bitcoin wallet coordinates dispatched to ${prospectUsername} via billing bot.`, undefined, 'OUTREACH_OK');
       } else {
         onAddLog('info', `✅ OUTREACH SIMULATED (SANDBOX): Custom payment terms & rules packet successfully relayed into pipeline for lead ${prospectUsername} (${prospectPhone}).`, undefined, 'OUTREACH_SIM');
       }
@@ -548,17 +573,17 @@ export default function TelegramBotSetup({
 
     // Automatically trigger a pending receipt submission from this user to allow full preview loop
     setTimeout(() => {
-      onAddLog('warning', `🔔 NEW ACTIONABLE TICKET: Customer ${prospectUsername} submitted payment proof receipt ($${parseFloat(paymentAmount).toFixed(2)} - ${bitcoinAddress ? 'Bitcoin' : 'PayPal'}). Review the pending receipt below!`, undefined, 'TICKET_RECVD');
+      onAddLog('warning', `🔔 NEW ACTIONABLE TICKET: Customer ${prospectUsername} submitted payment proof receipt ($${parseFloat(paymentAmount).toFixed(2)} - ${bitcoinAddress ? 'Bitcoin' : 'Zelle'}). Review the pending receipt below!`, undefined, 'TICKET_RECVD');
       
       const newRec: ReceiptRecord = {
         id: `rec_${Date.now()}`,
         customerHandle: prospectUsername,
         customerPhone: prospectPhone,
-        method: Math.random() > 0.5 ? 'Bitcoin' : 'PayPal',
+        method: Math.random() > 0.5 ? 'Bitcoin' : 'Zelle',
         amountText: parseFloat(paymentAmount).toFixed(2),
         status: 'pending',
         timestamp: 'Just now',
-        txHashOrProof: Math.random() > 0.5 ? `TXN_BTC_${Math.floor(Math.random()*10000000).toString(16).toUpperCase()}` : `PAY_ID_${Math.floor(Math.random()*10000000).toString(16).toUpperCase()}`
+        txHashOrProof: Math.random() > 0.5 ? `TXN_BTC_${Math.floor(Math.random()*10000000).toString(16).toUpperCase()}` : `ZEL_REF_${Math.floor(Math.random()*10000000).toString(16).toUpperCase()}`
       };
       setReceiptQueue(prev => [newRec, ...prev]);
     }, 3000);
@@ -574,7 +599,7 @@ export default function TelegramBotSetup({
       `🛠️ INSTALLATION DETAILS:\n` +
       `• Activated Platform: Spark Driver Auto-Grabber v12.4\n` +
       `• License Level: Lifetime Perpetual Cloud Pass\n` +
-      `• Download Link: https://t.me/multi_grabber_system_bot\n\n` +
+      `• Download Link: ${activeBotLink}\n\n` +
       `Thank you for your payment! Keep the system running on standby to fetch 1ms orders!`;
 
     try {
@@ -590,7 +615,7 @@ export default function TelegramBotSetup({
           reply_markup: {
             inline_keyboard: [
               [
-                { text: "📥 Click here to Install Multi-Grabber Bot", url: "https://t.me/multi_grabber_system_bot" }
+                { text: "📥 Click here to Install Multi-Grabber Bot", url: activeBotLink }
               ]
             ]
           }
@@ -622,7 +647,7 @@ export default function TelegramBotSetup({
     } catch(e) {}
   };
 
-  const handleAddDemoReceipt = (method: 'Bitcoin' | 'PayPal') => {
+  const handleAddDemoReceipt = (method: 'Bitcoin' | 'Zelle') => {
     const randomNames = ['@chicago_dispatcher', '@delivery_hustler_tx', '@houston_sparky', '@kansas_auto_tap'];
     const randomPhones = ['+1 (312) 555-1029', '+1 (713) 555-0145', '+1 (281) 555-7301', '+1 (913) 555-3392'];
     const idx = Math.floor(Math.random() * randomNames.length);
@@ -637,7 +662,7 @@ export default function TelegramBotSetup({
       timestamp: 'Just now',
       txHashOrProof: method === 'Bitcoin' 
         ? `TXN_BTC_${Math.floor(Math.random()*1000000000).toString(16).toUpperCase()}` 
-        : `PAY_ID_${Math.floor(Math.random()*1000000000).toString(16).toUpperCase()}`
+        : `ZEL_REF_${Math.floor(Math.random()*1000000000).toString(16).toUpperCase()}`
     };
 
     setReceiptQueue(prev => [newRec, ...prev]);
@@ -662,7 +687,7 @@ export default function TelegramBotSetup({
         totalPay: '38.50',
         distance: '4.2',
         paymentAmount: paymentAmount || '130.00',
-        paymentMethod: 'PayPal Express',
+        paymentMethod: 'Zelle Payee Routing',
         payeeName: payeeName || 'Godfrey N Joshua',
         status: 'SENT',
         messagingPlatform: 'Telegram'
@@ -917,7 +942,7 @@ export default function TelegramBotSetup({
           <div className="p-2 border border-neutral-900 rounded bg-neutral-950/45 flex items-center justify-between">
             <div>
               <span className="text-[8.5px] font-bold text-[#00f2ff] block">RECEIVE LEADS & SEND PAY METHOD</span>
-              <span className="text-[7.5px] text-neutral-400">Pipes dispatches & automatically attaches PayPal/BTC checkout terms</span>
+              <span className="text-[7.5px] text-neutral-400">Pipes dispatches & automatically attaches Zelle/BTC checkout terms</span>
             </div>
             <button
               type="button"
@@ -1107,7 +1132,7 @@ export default function TelegramBotSetup({
                 onClick={() => {
                   const cmdBlock = activeCommandTab === 'dispatch' 
                     ? "start - Start Driver Dispatch & Bind Device\nstatus - Check Active Driver Node & Subscription Status\nsettings - Configure Click Delay & Auto-Accept Speed\nhelp - View Documentation and Setup Guide\nstop - Stop Auto-Accept Grabber Agent"
-                    : "start - Launch Customer Helpdesk & Pricing Info\nbuy - Get Stripe Card & PayPal Checkout URLs\nrules - View Software Terms & Device Guidelines\nstatus - Check Submitted Payment Proof Status\nsupport - Contact HGT Global Support Team";
+                    : "start - Launch Customer Helpdesk & Pricing Info\nbuy - Get Stripe Card & Zelle Routing Details\nrules - View Software Terms & Device Guidelines\nstatus - Check Submitted Payment Proof Status\nsupport - Contact HGT Global Support Team";
                   navigator.clipboard.writeText(cmdBlock);
                   setCopiedCommandMenu(true);
                   onAddLog('info', `📋 Copied BotFather commands block to clipboard for ${activeCommandTab === 'dispatch' ? 'Dispatch Bot' : 'Billing/Response Bot'}.`, undefined, 'COPY_BOTFATHER_OK');
@@ -1132,7 +1157,7 @@ help - View Documentation and Setup Guide
 stop - Stop Auto-Accept Grabber Agent`
               ) : (
                 `start - Launch Customer Helpdesk & Pricing Info
-buy - Get Stripe Card & PayPal Checkout URLs
+buy - Get Stripe Card & Zelle Routing Details
 rules - View Software Terms & Device Guidelines
 status - Check Submitted Payment Proof Status
 support - Contact HGT Global Support Team`
@@ -1261,7 +1286,7 @@ support - Contact HGT Global Support Team`
           <div className="p-2 border border-neutral-900 rounded bg-neutral-950/45 flex items-center justify-between">
             <div>
               <span className="text-[8.5px] font-bold text-emerald-400 block">SEND PAY METHOD ALERTS</span>
-              <span className="text-[7.5px] text-neutral-400">Append Bitcoin & PayPal links to dispatches</span>
+              <span className="text-[7.5px] text-neutral-400">Append Bitcoin & Zelle info to dispatches</span>
             </div>
             <button
               type="button"
@@ -1269,7 +1294,7 @@ support - Contact HGT Global Support Team`
                 const val = !waAttachCheckout;
                 setWaAttachCheckout(val);
                 onAddLog('info', val 
-                  ? '💰 WHATSAPP CONFIG: Automatic attachment of PayPal & Bitcoin payment details activated.'
+                  ? '💰 WHATSAPP CONFIG: Automatic attachment of Zelle & Bitcoin payment details activated.'
                   : '💰 WHATSAPP CONFIG: Automatic attachment of checkout details disabled on WhatsApp.',
                   undefined, 'WA_PAY_FLAG'
                 );
@@ -1396,15 +1421,15 @@ support - Contact HGT Global Support Team`
           </div>
 
           <div className="space-y-1">
-            <label className="text-[9px] font-mono text-amber-400 block font-semibold uppercase flex items-center gap-1">
-              <span>💳 PAYPAL DIRECT CHECKOUT LINK</span>
+            <label className="text-[9px] font-mono text-emerald-400 block font-semibold uppercase flex items-center gap-1">
+              <span>💸 ZELLE ROUTING RECIPIENT EMAIL</span>
             </label>
             <input
               type="text"
-              value={paypalLink}
-              onChange={(e) => setPaypalLink(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-800 focus:border-[#00f2ff] placeholder-neutral-600 text-[10px] text-white p-2 rounded outline-none font-mono text-indigo-300"
-              placeholder="Ex: https://paypal.me/yourname/130"
+              value={zelleRoutingAddress}
+              onChange={(e) => setZelleRoutingAddress(e.target.value)}
+              className="w-full bg-neutral-950 border border-neutral-800 focus:border-[#00f2ff] placeholder-neutral-600 text-[10px] text-white p-2 rounded outline-none font-mono text-emerald-300"
+              placeholder="Ex: zelle@hacyberglobal.dpdns.org"
             />
           </div>
         </div>
@@ -1591,69 +1616,69 @@ support - Contact HGT Global Support Team`
               </div>
             </div>
 
-            {/* PayPal Direct URL */}
+            {/* Zelle Payee Routing */}
             <div className="bg-black/80 rounded border border-neutral-850 p-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="space-y-0.5">
-                <span className="text-[7.5px] font-mono text-neutral-500 uppercase font-black block">2. PAYPAL DIRECT CHECKOUT</span>
-                <span className="text-[8.5px] font-mono text-amber-400 font-medium select-all break-all">
-                  {paypalLink}
+                <span className="text-[7.5px] font-mono text-neutral-500 uppercase font-black block">2. ZELLE PAYEE ROUTING</span>
+                <span className="text-[8.5px] font-mono text-emerald-400 font-medium select-all break-all">
+                  {zelleRoutingAddress}
                 </span>
               </div>
               <div className="flex gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText(paypalLink);
-                    setCopiedLeadLink('paypal');
-                    onAddLog('info', `📋 Copied PayPal Direct URL: ${paypalLink}`, undefined, 'COPY_LEAD_OK');
+                    navigator.clipboard.writeText(zelleRoutingAddress);
+                    setCopiedLeadLink('zelle');
+                    onAddLog('info', `📋 Copied Zelle Routing Email: ${zelleRoutingAddress}`, undefined, 'COPY_LEAD_OK');
                     setTimeout(() => setCopiedLeadLink(null), 1500);
                   }}
-                  className="px-2 py-1 bg-amber-550/10 hover:bg-amber-550/20 text-amber-400 border border-amber-500/20 text-[7.5px] font-mono font-bold rounded cursor-pointer transition-all uppercase"
+                  className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[7.5px] font-mono font-bold rounded cursor-pointer transition-all uppercase"
                 >
-                  {copiedLeadLink === 'paypal' ? 'Copied!' : 'Copy Link'}
+                  {copiedLeadLink === 'zelle' ? 'Copied!' : 'Copy Zelle'}
                 </button>
-                <a
-                  href={paypalLink}
-                  target="_blank"
-                  className="px-2 py-1 bg-neutral-900 hover:bg-neutral-850 text-neutral-400 border border-neutral-800 text-[7.5px] font-mono font-bold rounded flex items-center gap-0.5"
-                  referrerPolicy="no-referrer"
-                >
-                  <span>Launch</span>
-                  <ExternalLink className="w-2 h-2" />
-                </a>
               </div>
             </div>
 
             {/* Telegram Grabber Downloader Link */}
             <div className="bg-black/80 rounded border border-neutral-850 p-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="space-y-0.5">
-                <span className="text-[7.5px] font-mono text-neutral-500 uppercase font-black block">3. BOT INSTALLATION LINK</span>
-                <span className="text-[8.5px] font-mono text-[#00f2ff] font-medium select-all break-all">
-                  https://t.me/multi_grabber_system_bot
-                </span>
+              <div className="space-y-0.5 flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[7.5px] font-mono text-neutral-500 uppercase font-black block">3. ACTIVE BOT LINK (CLICK TO OPEN)</span>
+                  <span className="text-[7px] font-mono text-emerald-400 bg-emerald-500/10 px-1 rounded border border-emerald-500/20">LIVE ENGINE</span>
+                </div>
+                <input
+                  type="text"
+                  value={activeBotLink}
+                  onChange={(e) => {
+                    setActiveBotLink(e.target.value);
+                    localStorage.setItem('spark_bot_active_link', e.target.value);
+                  }}
+                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-[#00f2ff] text-[9px] font-mono text-[#00f2ff] px-2 py-1 rounded outline-none"
+                  placeholder="https://t.me/multi_grabber_system_bot"
+                />
               </div>
-              <div className="flex gap-1.5 shrink-0">
+              <div className="flex gap-1.5 shrink-0 self-end sm:self-center">
                 <button
                   type="button"
                   onClick={() => {
-                    const l = "https://t.me/multi_grabber_system_bot";
-                    navigator.clipboard.writeText(l);
+                    navigator.clipboard.writeText(activeBotLink);
                     setCopiedLeadLink('install');
-                    onAddLog('info', `📋 Copied Bot Download Link: ${l}`, undefined, 'COPY_LEAD_OK');
+                    onAddLog('info', `📋 Copied Active Bot Link: ${activeBotLink}`, undefined, 'COPY_LEAD_OK');
                     setTimeout(() => setCopiedLeadLink(null), 1500);
                   }}
-                  className="px-2 py-1 bg-[#00f2ff]/10 hover:bg-[#00f2ff]/20 text-[#00f2ff] border border-[#00f2ff]/20 text-[7.5px] font-mono font-bold rounded cursor-pointer transition-all uppercase"
+                  className="px-2.5 py-1 bg-[#00f2ff]/10 hover:bg-[#00f2ff]/20 text-[#00f2ff] border border-[#00f2ff]/20 text-[8px] font-mono font-bold rounded cursor-pointer transition-all uppercase"
                 >
                   {copiedLeadLink === 'install' ? 'Copied!' : 'Copy Link'}
                 </button>
                 <a
-                  href="https://t.me/multi_grabber_system_bot"
+                  href={activeBotLink}
                   target="_blank"
-                  className="px-2 py-1 bg-neutral-900 hover:bg-neutral-850 text-neutral-400 border border-neutral-800 text-[7.5px] font-mono font-bold rounded flex items-center gap-0.5"
+                  className="px-3 py-1 bg-[#00f2ff] hover:bg-[#00f2ff]/90 text-neutral-950 font-extrabold text-[8px] font-mono rounded flex items-center gap-1 shadow-[0_0_10px_rgba(0,242,255,0.3)]"
                   referrerPolicy="no-referrer"
                 >
-                  <span>Launch</span>
-                  <ExternalLink className="w-2 h-2" />
+                  <span>Launch Bot</span>
+                  <ExternalLink className="w-2.5 h-2.5" />
                 </a>
               </div>
             </div>
@@ -1680,16 +1705,16 @@ support - Contact HGT Global Support Team`
             </button>
             <button
               type="button"
-              onClick={() => handleAddDemoReceipt('PayPal')}
-              className="text-[7.5px] bg-[#00f2ff]/10 border border-[#00f2ff]/35 text-[#00f2ff] font-mono px-2 py-1 rounded cursor-pointer hover:bg-[#00f2ff] hover:text-neutral-950 transition-colors uppercase font-bold"
+              onClick={() => handleAddDemoReceipt('Zelle')}
+              className="text-[7.5px] bg-emerald-500/10 border border-emerald-500/35 text-emerald-400 font-mono px-2 py-1 rounded cursor-pointer hover:bg-emerald-400 hover:text-neutral-950 transition-colors uppercase font-bold"
             >
-              + SIMULATE INBOUND PAYPAL TICKET
+              + SIMULATE INBOUND ZELLE TICKET
             </button>
           </div>
         </div>
 
         <div className="text-[8px] text-neutral-400 leading-relaxed max-w-full">
-          💡 <strong>ADMINISTRATOR INSTRUCTIONS:</strong> Review blockchain tx hashes, Paypal statement IDs or transaction invoices provided by driver leads. Once confirmed, press **"APPROVE & SEND BOT ACTIVATION"** to push structural files & license credentials instantly via Telegram.
+          💡 <strong>ADMINISTRATOR INSTRUCTIONS:</strong> Review blockchain tx hashes, Zelle payment confirmations or transaction invoices provided by driver leads. Once confirmed, press **"APPROVE & SEND BOT ACTIVATION"** to push structural files & license credentials instantly via Telegram.
         </div>
 
         {/* Matrix List of files */}

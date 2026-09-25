@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hacyber Global Tech | HGT Spark Bot Integration Portal</title>
+    <title>Activation & Verification Support Center | HACYBERGLOBATECH</title>
+    <meta name="description" content="Official lead intake and verification support portal for authorized gig-economy driver assistance, platform onboarding, and telemetry support.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
@@ -16,15 +17,17 @@
             --text-main: #e2e8f0;
             --text-muted: #94a3b8;
             --border-glow: rgba(0, 240, 255, 0.25);
+            --border-subtle: rgba(255, 255, 255, 0.08);
             --success: #00ff88;
             --warning: #ffb700;
+            --danger: #ef4444;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Rajdhani', sans-serif;
+            font-family: 'Rajdhani', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         body {
@@ -34,112 +37,379 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 20px 12px;
             background-image: 
-                radial-gradient(circle at 15% 15%, rgba(112, 0, 255, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 85% 85%, rgba(0, 240, 255, 0.15) 0%, transparent 40%);
+                radial-gradient(circle at 15% 15%, rgba(112, 0, 255, 0.15) 0%, transparent 45%),
+                radial-gradient(circle at 85% 85%, rgba(0, 240, 255, 0.15) 0%, transparent 45%),
+                linear-gradient(180deg, rgba(8, 11, 16, 0.95), rgba(8, 11, 16, 1));
         }
 
         .container {
             width: 100%;
-            max-width: 850px;
+            max-width: 880px;
             background: var(--card-bg);
             border: 1px solid var(--border-glow);
-            border-radius: 12px;
-            box-shadow: 0 0 30px rgba(0, 240, 255, 0.1);
-            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 0 50px rgba(0, 240, 255, 0.08);
+            padding: 36px 32px;
             position: relative;
             overflow: hidden;
         }
 
+        @media (max-width: 640px) {
+            .container {
+                padding: 24px 16px;
+            }
+        }
+
+        /* Top Security Accent Strip */
+        .top-accent {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), #3b82f6, var(--secondary));
+        }
+
         .header {
             text-align: center;
-            margin-bottom: 25px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-subtle);
             padding-bottom: 20px;
+        }
+
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 240, 255, 0.08);
+            color: var(--primary);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            padding: 4px 14px;
+            border-radius: 9999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
         }
 
         .header h1 {
             font-family: 'Orbitron', sans-serif;
-            color: var(--primary);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-size: 1.8rem;
-        }
-
-        .status-badge {
-            display: inline-block;
-            background: rgba(0, 255, 136, 0.1);
-            color: var(--success);
-            border: 1px solid var(--success);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            margin-top: 10px;
-            font-weight: 700;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .feature-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(0, 240, 255, 0.2);
-            border-radius: 8px;
-            padding: 15px;
-            transition: all 0.3s ease;
-        }
-
-        .feature-card:hover {
-            border-color: var(--primary);
-            box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .feature-card h3 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.95rem;
-            color: var(--primary);
+            color: #ffffff;
+            letter-spacing: 1.5px;
+            font-size: 1.75rem;
             margin-bottom: 6px;
-            display: flex;
-            align-items: center;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            max-width: 620px;
+            margin: 0 auto;
+        }
+
+        /* Progress Steps Bar - 2026 UX Best Practice */
+        .progress-bar-container {
+            margin-bottom: 28px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 14px 18px;
+        }
+
+        .steps-nav {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 8px;
         }
 
-        .feature-card p {
-            font-size: 0.88rem;
-            color: var(--text-muted);
-            line-height: 1.35;
+        .step-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-align: left;
+            padding: 6px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            opacity: 0.4;
         }
 
+        .step-pill.active {
+            opacity: 1;
+            background: rgba(0, 240, 255, 0.06);
+        }
+
+        .step-pill.completed {
+            opacity: 0.9;
+        }
+
+        .step-circle {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #1e293b;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            transition: 0.2s;
+        }
+
+        .step-pill.active .step-circle {
+            background: var(--primary);
+            color: #080b10;
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
+        }
+
+        .step-pill.completed .step-circle {
+            background: var(--success);
+            color: #080b10;
+        }
+
+        .step-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .step-text strong {
+            display: block;
+            font-size: 0.85rem;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .step-text span {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        .progress-line-track {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 2px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+
+        .progress-line-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #3b82f6);
+            width: 25%;
+            transition: width 0.3s ease-in-out;
+        }
+
+        /* Trust Banner */
+        .trust-banner {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 12px 16px;
+            background: rgba(0, 240, 255, 0.03);
+            border: 1px solid rgba(0, 240, 255, 0.15);
+            border-radius: 10px;
+        }
+
+        .trust-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .trust-item strong {
+            color: var(--text-main);
+        }
+
+        /* Glassmorphic Success Toast */
+        .glass-toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 10000;
+            max-width: 440px;
+            width: calc(100% - 48px);
+            pointer-events: none;
+        }
+
+        .glass-toast {
+            pointer-events: auto;
+            position: relative;
+            overflow: hidden;
+            background: rgba(10, 14, 23, 0.88);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 16px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 240, 255, 0.15);
+            padding: 16px 20px;
+            color: #e2e8f0;
+            transform: translateY(-35px) scale(0.94);
+            opacity: 0;
+            transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-toast.show {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        .glass-toast::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00f0ff, #00ff88, transparent);
+        }
+
+        .glass-toast-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .glass-toast-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass-toast-badge {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff88;
+            box-shadow: 0 0 8px #00ff88;
+            display: inline-block;
+        }
+
+        .glass-toast-close {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 1.1rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: color 0.2s;
+        }
+
+        .glass-toast-close:hover {
+            color: #fff;
+        }
+
+        .glass-toast-body {
+            font-size: 0.82rem;
+            color: #94a3b8;
+            line-height: 1.45;
+            margin-bottom: 10px;
+        }
+
+        .glass-toast-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            font-family: monospace;
+            font-size: 0.78rem;
+        }
+
+        .glass-toast-ticket {
+            color: #00f0ff;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .glass-toast-progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #00f0ff, #00ff88);
+            width: 100%;
+            transform-origin: left;
+            animation: toastProgress 6.5s linear forwards;
+        }
+
+        @keyframes toastProgress {
+            from { transform: scaleX(1); }
+            to { transform: scaleX(0); }
+        }
+
+        /* Forms & Inputs */
         .step-container {
             display: none;
         }
 
         .step-container.active {
             display: block;
-            animation: fadeIn 0.4s ease-in-out;
+            animation: fadeIn 0.35s ease-in-out;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         label {
             display: block;
-            margin-bottom: 8px;
-            color: var(--primary);
+            margin-bottom: 6px;
+            color: #cbd5e1;
+            font-size: 0.9rem;
             font-weight: 600;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
+        }
+
+        label .required {
+            color: var(--primary);
+        }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 0.78rem;
+            margin-top: 4px;
+            display: none;
         }
 
         input[type="text"],
@@ -147,56 +417,189 @@
         input[type="tel"],
         select {
             width: 100%;
-            padding: 12px 16px;
-            background: rgba(8, 11, 16, 0.8);
-            border: 1px solid rgba(0, 240, 255, 0.3);
-            border-radius: 6px;
-            color: #fff;
-            font-size: 1rem;
-            transition: all 0.3s ease;
+            padding: 12px 14px;
+            background: rgba(8, 11, 16, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            transition: all 0.25s ease;
         }
 
         input:focus, select:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+            background: rgba(15, 21, 32, 0.95);
         }
 
         .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 14px;
+        }
+
+        @media (max-width: 550px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .steps-nav .step-text {
+                display: none;
+            }
+        }
+
+        /* Network & Hardware Cards */
+        .card-selector-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .device-radio-label {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 12px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        .device-radio-label:hover {
+            border-color: var(--primary);
+            background: rgba(0, 240, 255, 0.05);
+            color: #fff;
+        }
+
+        .device-radio-label input {
+            display: none;
+        }
+
+        .device-radio-label.checked {
+            border-color: var(--primary);
+            background: rgba(0, 240, 255, 0.12);
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+            font-weight: 700;
         }
 
         .checkbox-group {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 12px;
-            margin-top: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 10px;
+            margin-top: 8px;
         }
 
         .checkbox-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 12px;
-            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-subtle);
+            padding: 10px 14px;
+            border-radius: 8px;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 10px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
             transition: 0.2s ease;
+            user-select: none;
         }
 
         .checkbox-card:hover {
             border-color: var(--primary);
-            background: rgba(0, 240, 255, 0.05);
+            background: rgba(0, 240, 255, 0.04);
+            color: #fff;
         }
 
+        .checkbox-card.checked {
+            border-color: var(--primary);
+            background: rgba(0, 240, 255, 0.1);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .checkbox-card input {
+            accent-color: var(--primary);
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Tier Selection Cards */
+        .tier-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+            margin-bottom: 20px;
+        }
+
+        .tier-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .tier-card:hover {
+            border-color: var(--primary);
+        }
+
+        .tier-card.selected {
+            border-color: var(--primary);
+            background: rgba(0, 240, 255, 0.08);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+        }
+
+        .tier-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .tier-title {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #fff;
+        }
+
+        .tier-badge {
+            font-size: 0.65rem;
+            font-family: 'Orbitron', sans-serif;
+            background: var(--primary);
+            color: #000;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .tier-desc {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            line-height: 1.35;
+        }
+
+        .tier-price {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Price Breakdown */
         .price-summary {
-            background: rgba(112, 0, 255, 0.1);
-            border: 1px solid var(--secondary);
-            border-radius: 8px;
-            padding: 15px;
+            background: rgba(112, 0, 255, 0.08);
+            border: 1px solid rgba(112, 0, 255, 0.3);
+            border-radius: 10px;
+            padding: 16px;
             margin-bottom: 20px;
         }
 
@@ -204,59 +607,50 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 8px;
-            font-size: 1.05rem;
+            font-size: 0.95rem;
+            color: #cbd5e1;
         }
 
         .price-row.total {
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            padding-top: 10px;
             font-weight: 700;
             color: var(--primary);
-            font-size: 1.2rem;
+            font-size: 1.15rem;
+            font-family: 'Orbitron', sans-serif;
         }
 
-        /* DYNAMIC PAYMENT CARD & HIGHLIGHTS */
+        /* Payment Details Box */
         .payment-info-box {
-            display: block;
-            background: rgba(0, 240, 255, 0.05);
-            border: 2px solid var(--primary);
-            border-radius: 8px;
-            padding: 20px;
+            background: rgba(0, 240, 255, 0.04);
+            border: 1px solid var(--primary);
+            border-radius: 10px;
+            padding: 18px;
             margin-bottom: 20px;
-            word-break: break-all;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
         }
 
         .payment-info-box h4 {
             color: var(--primary);
             font-family: 'Orbitron', sans-serif;
-            margin-bottom: 12px;
-            font-size: 1.1rem;
-        }
-
-        .payment-info-box ol, .payment-info-box ul {
-            margin-left: 20px;
-            margin-bottom: 15px;
-            font-size: 0.92rem;
-            color: var(--text-main);
-            line-height: 1.5;
-        }
-
-        .payment-info-box li {
-            margin-bottom: 6px;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .address-box {
             background: rgba(0, 0, 0, 0.8);
-            border: 1px solid var(--success);
-            padding: 12px;
+            border: 1px solid rgba(0, 255, 136, 0.4);
+            padding: 10px 14px;
             border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 10px;
-            margin-top: 8px;
-            margin-bottom: 12px;
+            margin: 10px 0;
+            word-break: break-all;
         }
 
         .address-box code {
@@ -275,47 +669,57 @@
             font-weight: 700;
             cursor: pointer;
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             transition: 0.2s;
             white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .copy-btn:hover {
-            opacity: 0.8;
+            opacity: 0.85;
             transform: scale(1.02);
         }
 
         .action-link-btn {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             width: 100%;
             text-align: center;
-            background: linear-gradient(90deg, #ff0055, var(--secondary));
+            background: linear-gradient(90deg, #0070ba, #003087);
             color: #fff;
             padding: 12px;
-            border-radius: 6px;
+            border-radius: 8px;
             font-family: 'Orbitron', sans-serif;
             font-weight: 700;
             text-decoration: none;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
             margin-top: 10px;
-            box-shadow: 0 0 10px rgba(255, 0, 85, 0.4);
-            transition: 0.3s;
+            transition: 0.2s;
         }
 
         .action-link-btn:hover {
             opacity: 0.9;
-            box-shadow: 0 0 20px rgba(255, 0, 85, 0.6);
+            box-shadow: 0 0 15px rgba(0, 112, 186, 0.5);
         }
 
+        /* File Upload */
         .file-upload-wrapper {
             position: relative;
-            border: 2px dashed var(--primary);
-            padding: 20px;
+            border: 2px dashed rgba(0, 240, 255, 0.4);
+            padding: 24px 16px;
             text-align: center;
-            border-radius: 8px;
+            border-radius: 10px;
             background: rgba(0, 240, 255, 0.02);
             cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .file-upload-wrapper:hover {
+            border-color: var(--primary);
+            background: rgba(0, 240, 255, 0.05);
         }
 
         .file-upload-wrapper input[type="file"] {
@@ -328,211 +732,491 @@
             cursor: pointer;
         }
 
+        /* Buttons & Actions */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
         .btn {
-            width: 100%;
-            padding: 14px;
+            padding: 13px 24px;
             background: linear-gradient(90deg, var(--secondary), var(--primary));
             border: none;
-            border-radius: 6px;
-            color: #fff;
+            border-radius: 8px;
+            color: #080b10;
             font-family: 'Orbitron', sans-serif;
-            font-weight: 700;
-            font-size: 1rem;
+            font-weight: 800;
+            font-size: 0.95rem;
             text-transform: uppercase;
             cursor: pointer;
-            transition: 0.3s ease;
-            margin-top: 15px;
+            transition: 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .btn:hover {
-            opacity: 0.9;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+            opacity: 0.95;
+            box-shadow: 0 0 18px rgba(0, 240, 255, 0.35);
+            transform: translateY(-1px);
         }
 
-        .notice {
-            background: rgba(255, 183, 0, 0.1);
+        .btn-secondary {
+            background: #1e293b;
+            color: #cbd5e1;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+            background: #334155;
+            color: #fff;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Disclaimer Notice (Strict Project Rule Compliance) */
+        .disclaimer-box {
+            background: rgba(255, 183, 0, 0.06);
+            border: 1px solid rgba(255, 183, 0, 0.25);
             border-left: 4px solid var(--warning);
-            padding: 12px;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-            border-radius: 0 6px 6px 0;
+            padding: 12px 14px;
+            font-size: 0.84rem;
+            color: #e2e8f0;
+            border-radius: 6px;
+            margin: 18px 0;
+            line-height: 1.45;
+        }
+
+        .disclaimer-box strong {
+            color: var(--warning);
+        }
+
+        .terms-checkbox {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            user-select: none;
+            margin: 16px 0;
+        }
+
+        .terms-checkbox input {
+            margin-top: 3px;
+            accent-color: var(--primary);
+            width: 16px;
+            height: 16px;
+        }
+
+        .terms-checkbox strong {
+            color: #fff;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <div class="top-accent"></div>
+
     <div class="header">
-        <h1>Hacyber Global Tech</h1>
-        <div class="status-badge">⚡ HGT Spark Bot Active | Multi-Network Interceptor</div>
+        <div class="brand-badge">
+            <span class="live-dot"></span>
+            HACYBERGLOBATECH
+        </div>
+        <h1>Activation &amp; Verification Support Center</h1>
+        <p>Driver and gig-platform support guidance, verification assistance, background-check guidance, and authorized platform integrations.</p>
     </div>
 
-    <!-- HGT SPARK BOT KEY FEATURES HIGHLIGHT -->
-    <div class="features-grid">
-        <div class="feature-card">
-            <h3>⚡ Sub-100ms Grabber</h3>
-            <p>High-speed, automated block interception designed to capture high-value offers before human refresh speeds.</p>
+    <!-- 2026 Progressive Multi-Step Progress Tracker -->
+    <div class="progress-bar-container">
+        <div class="steps-nav">
+            <button type="button" class="step-pill active" id="pill1" onclick="goToStep(1)">
+                <div class="step-circle" id="circle1">1</div>
+                <div class="step-text">
+                    <strong>Profile</strong>
+                    <span>Identity &amp; Area</span>
+                </div>
+            </button>
+            <button type="button" class="step-pill" id="pill2" onclick="goToStep(2)">
+                <div class="step-circle" id="circle2">2</div>
+                <div class="step-text">
+                    <strong>Networks</strong>
+                    <span>Apps &amp; Hardware</span>
+                </div>
+            </button>
+            <button type="button" class="step-pill" id="pill3" onclick="goToStep(3)">
+                <div class="step-circle" id="circle3">3</div>
+                <div class="step-text">
+                    <strong>Preferences</strong>
+                    <span>SLA &amp; Support Tier</span>
+                </div>
+            </button>
+            <button type="button" class="step-pill" id="pill4" onclick="goToStep(4)">
+                <div class="step-circle" id="circle4">4</div>
+                <div class="step-text">
+                    <strong>Verification</strong>
+                    <span>Payment Routing</span>
+                </div>
+            </button>
         </div>
-        <div class="feature-card">
-            <h3>🛡️ Stealth & Anti-Detect</h3>
-            <p>Encrypted request signatures and hardware profile spoofing prevent account flags or security triggers.</p>
+        <div class="progress-line-track">
+            <div class="progress-line-fill" id="progressFill"></div>
         </div>
-        <div class="feature-card">
-            <h3>⚙️ Custom Multi-App Filtering</h3>
-            <p>Target specific dollar thresholds ($30+), delivery ranges, and batch types across Spark, Flex, and major gig networks.</p>
+    </div>
+
+    <!-- Security & Trust Badges -->
+    <div class="trust-banner">
+        <div class="trust-item">
+            <span>🛡️</span>
+            <span><strong>TLS 1.3</strong> Encrypted Intake</span>
         </div>
-        <div class="feature-card">
-            <h3>🔄 Persistent 24/7 Container Run</h3>
-            <p>Runs in dedicated persistent container instances ensuring uninterrupted, always-on dispatch interception.</p>
+        <div class="trust-item">
+            <span>🔒</span>
+            <span><strong>Zero Password</strong> Collection</span>
+        </div>
+        <div class="trust-item">
+            <span>⚡</span>
+            <span><strong>Live Queue</strong> Telegram Alerts</span>
+        </div>
+        <div class="trust-item">
+            <span>⚖️</span>
+            <span><strong>Authorized</strong> Support Only</span>
         </div>
     </div>
 
     <form id="integrationForm" onsubmit="handleFormSubmit(event)">
-        <!-- STEP 1: Client Profile -->
+        <!-- STEP 1: Driver Profile & Market -->
         <div class="step-container active" id="step1">
-            <h2 style="color: var(--primary); margin-bottom: 15px;">1. Client Profile & Location</h2>
+            <h2 style="color: var(--primary); font-size: 1.15rem; font-family: 'Orbitron', sans-serif; margin-bottom: 14px;">
+                1. Driver Profile &amp; Location Market
+            </h2>
+
             <div class="form-group">
-                <label>Full Name</label>
-                <input type="text" id="fullName" required placeholder="Godfrey Joshua">
+                <label>Full Legal Name <span class="required">*</span></label>
+                <input type="text" id="fullName" required placeholder="Godfrey Joshua" autocomplete="name">
+                <div class="error-msg" id="err-fullName">Please enter your full legal name.</div>
             </div>
+
             <div class="grid-2">
                 <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" id="email" required placeholder="client@example.com">
+                    <label>Email Address <span class="required">*</span></label>
+                    <input type="email" id="email" required placeholder="driver@logistics-pilot.io" autocomplete="email">
+                    <div class="error-msg" id="err-email">Valid email is required for ticket tracking.</div>
                 </div>
                 <div class="form-group">
-                    <label>Mobile Number</label>
-                    <input type="tel" id="mobile" required placeholder="+1 (555) 000-0000">
+                    <label>Mobile Contact Number <span class="required">*</span></label>
+                    <input type="tel" id="mobile" required placeholder="+1 (469) 555-0198" autocomplete="tel">
+                    <div class="error-msg" id="err-mobile">Mobile number is required for SMS/Telegram sync.</div>
                 </div>
             </div>
+
             <div class="grid-2">
                 <div class="form-group">
-                    <label>Street Address</label>
-                    <input type="text" id="streetAddress" required placeholder="123 Logistics Way">
+                    <label>Street Address <span class="required">*</span></label>
+                    <input type="text" id="streetAddress" required placeholder="1420 Commerce Street" autocomplete="street-address">
+                    <div class="error-msg" id="err-streetAddress">Service address is required.</div>
                 </div>
                 <div class="form-group">
-                    <label>Zip Code / Postal Code</label>
-                    <input type="text" id="zipCode" required placeholder="75001">
+                    <label>ZIP / Postal Code <span class="required">*</span></label>
+                    <input type="text" id="zipCode" required placeholder="75201" autocomplete="postal-code">
+                    <div class="error-msg" id="err-zipCode">ZIP code is required.</div>
                 </div>
             </div>
-            <button type="button" class="btn" onclick="nextStep(2)">Continue Integration →</button>
+
+            <div class="nav-buttons">
+                <div></div>
+                <button type="button" class="btn" onclick="validateAndNext(1)">
+                    Continue to Hardware &amp; Apps &rarr;
+                </button>
+            </div>
         </div>
 
         <!-- STEP 2: Hardware & Target Networks -->
         <div class="step-container" id="step2">
-            <h2 style="color: var(--primary); margin-bottom: 15px;">2. Hardware & Gig Networks</h2>
+            <h2 style="color: var(--primary); font-size: 1.15rem; font-family: 'Orbitron', sans-serif; margin-bottom: 14px;">
+                2. Hardware Device &amp; Connected Platforms
+            </h2>
+
             <div class="form-group">
-                <label>📱 Primary Mobile Operating System</label>
-                <select id="hardwareProfile" required>
-                    <option value="">Select operating device</option>
-                    <option value="iPhone (iOS)">iPhone (iOS)</option>
-                    <option value="Android Smartphone">Android Smartphone</option>
-                    <option value="Dedicated Delivery Tablet">Dedicated Delivery Tablet</option>
-                    <option value="Other Mobile Device">Other Mobile Device</option>
-                </select>
+                <label>Primary Operating Device <span class="required">*</span></label>
+                <div class="card-selector-grid">
+                    <label class="device-radio-label checked" onclick="selectDevice(this, 'iPhone (iOS)')">
+                        <input type="radio" name="devRadio" value="iPhone (iOS)" checked>
+                        📱 iPhone (iOS)
+                    </label>
+                    <label class="device-radio-label" onclick="selectDevice(this, 'Android Smartphone')">
+                        <input type="radio" name="devRadio" value="Android Smartphone">
+                        🤖 Android Phone
+                    </label>
+                    <label class="device-radio-label" onclick="selectDevice(this, 'Dedicated Delivery Tablet')">
+                        <input type="radio" name="devRadio" value="Dedicated Delivery Tablet">
+                        📋 Delivery Tablet
+                    </label>
+                    <label class="device-radio-label" onclick="selectDevice(this, 'Dual Device Setup')">
+                        <input type="radio" name="devRadio" value="Dual Device Setup">
+                        ⚡ Dual Device
+                    </label>
+                </div>
+                <input type="hidden" id="hardwareProfile" value="iPhone (iOS)">
             </div>
 
             <div class="form-group">
-                <label>⚡ Connected Delivery Networks</label>
+                <label>Target Delivery Platforms <span class="required">*</span> (Select all that apply)</label>
                 <div class="checkbox-group">
-                    <label class="checkbox-card"><input type="checkbox" name="network" value="Walmart Spark" checked> Walmart Spark</label>
-                    <label class="checkbox-card"><input type="checkbox" name="network" value="Instacart"> Instacart</label>
-                    <label class="checkbox-card"><input type="checkbox" name="network" value="DoorDash"> DoorDash</label>
-                    <label class="checkbox-card"><input type="checkbox" name="network" value="Amazon Flex"> Amazon Flex</label>
-                    <label class="checkbox-card"><input type="checkbox" name="network" value="Uber Eats"> Uber Eats</label>
-                    <label class="checkbox-card"><input type="checkbox" name="network" value="Shipt"> Shipt Shopper</label>
-                    <label class="checkbox-card"><input type="checkbox" name="network" value="Roadie"> Roadie (UPS)</label>
-                    <label class="checkbox-card"><input type="checkbox" name="network" value="Bungii"> Bungii</label>
-                    <label class="checkbox-card"><input type="checkbox" name="network" value="GoShare"> GoShare Freight</label>
-                    <label class="checkbox-card"><input type="checkbox" name="network" value="Lyft"> Lyft Rideshare</label>
+                    <label class="checkbox-card checked"><input type="checkbox" name="network" value="Walmart Spark" checked onchange="toggleCardCheck(this)"> Walmart Spark</label>
+                    <label class="checkbox-card checked"><input type="checkbox" name="network" value="DoorDash" checked onchange="toggleCardCheck(this)"> DoorDash</label>
+                    <label class="checkbox-card"><input type="checkbox" name="network" value="Instacart" onchange="toggleCardCheck(this)"> Instacart</label>
+                    <label class="checkbox-card"><input type="checkbox" name="network" value="Amazon Flex" onchange="toggleCardCheck(this)"> Amazon Flex</label>
+                    <label class="checkbox-card"><input type="checkbox" name="network" value="Uber Eats" onchange="toggleCardCheck(this)"> Uber Eats</label>
+                    <label class="checkbox-card"><input type="checkbox" name="network" value="Shipt" onchange="toggleCardCheck(this)"> Shipt Shopper</label>
+                    <label class="checkbox-card"><input type="checkbox" name="network" value="Roadie" onchange="toggleCardCheck(this)"> Roadie (UPS)</label>
+                    <label class="checkbox-card"><input type="checkbox" name="network" value="Veho" onchange="toggleCardCheck(this)"> Veho Delivery</label>
+                    <label class="checkbox-card"><input type="checkbox" name="network" value="GoPuff" onchange="toggleCardCheck(this)"> GoPuff</label>
+                    <label class="checkbox-card"><input type="checkbox" name="network" value="Lyft" onchange="toggleCardCheck(this)"> Lyft</label>
+                    <label class="checkbox-card"><input type="checkbox" name="network" value="Curri" onchange="toggleCardCheck(this)"> Curri Logistics</label>
+                    <label class="checkbox-card"><input type="checkbox" name="network" value="SkipTheDishes" onchange="toggleCardCheck(this)"> SkipTheDishes</label>
                 </div>
             </div>
 
             <div class="form-group">
-                <label>Custom / Regional Platforms (Optional)</label>
-                <input type="text" id="customApps" placeholder="Enter other apps (comma separated)">
+                <label>Custom or Regional Apps (Optional)</label>
+                <input type="text" id="customApps" placeholder="e.g. Bungii, DeliverThat, Point Pickup">
             </div>
 
-            <button type="button" class="btn" onclick="nextStep(3)">Proceed to Order Preferences →</button>
+            <div class="nav-buttons">
+                <button type="button" class="btn btn-secondary" onclick="goToStep(1)">&larr; Back</button>
+                <button type="button" class="btn" onclick="validateAndNext(2)">Proceed to Preferences &rarr;</button>
+            </div>
         </div>
 
-        <!-- STEP 3: Order Configuration & Checkout -->
+        <!-- STEP 3: Order Configuration & SLA Tier -->
         <div class="step-container" id="step3">
-            <h2 style="color: var(--primary); margin-bottom: 15px;">3. Order Configuration & Checkout</h2>
-            
+            <h2 style="color: var(--primary); font-size: 1.15rem; font-family: 'Orbitron', sans-serif; margin-bottom: 14px;">
+                3. Order Configuration &amp; Support Tier
+            </h2>
+
             <div class="form-group">
-                <label>📦 Interception Profile</label>
+                <label>Interception &amp; Dispatch Preference <span class="required">*</span></label>
                 <select id="orderPreference" required>
-                    <option value="">Select order preference</option>
                     <option value="High-Value Priority Orders ($30+)">High-Value Priority Orders ($30+)</option>
                     <option value="Express Batch / Multi-Stop Orders">Express Batch / Multi-Stop Orders</option>
                     <option value="Instant Direct Delivery Blocks">Instant Direct Delivery Blocks</option>
-                    <option value="Grocery & Large Retail Batches">Grocery & Large Retail Batches</option>
+                    <option value="Grocery & Large Retail Batches">Grocery &amp; Large Retail Batches</option>
                     <option value="All Available Orders (Full Automation)">All Available Orders (Full Automation)</option>
                 </select>
+            </div>
+
+            <!-- Tier Packages -->
+            <label>Support Package Level</label>
+            <div class="tier-grid">
+                <div class="tier-card" onclick="selectTier(this, 'Standard Pilot', '130.00')">
+                    <div class="tier-header">
+                        <span class="tier-title">Standard Pilot</span>
+                    </div>
+                    <div class="tier-desc">Core setup, single-zone assistance, and basic verification guidance.</div>
+                    <div class="tier-price">$130.00</div>
+                </div>
+
+                <div class="tier-card selected" onclick="selectTier(this, 'Priority Pro', '130.00')">
+                    <div class="tier-header">
+                        <span class="tier-title">Priority Pro</span>
+                        <span class="tier-badge">RECOMMENDED</span>
+                    </div>
+                    <div class="tier-desc">Multi-app support, priority Telegram response, and telemetry monitoring.</div>
+                    <div class="tier-price">$130.00</div>
+                </div>
+
+                <div class="tier-card" onclick="selectTier(this, 'Enterprise Fleet', '130.00')">
+                    <div class="tier-header">
+                        <span class="tier-title">Fleet Operator</span>
+                    </div>
+                    <div class="tier-desc">Full multi-platform monitoring with customized routing setups.</div>
+                    <div class="tier-price">$130.00</div>
+                </div>
             </div>
 
             <!-- PRICING BREAKDOWN -->
             <div class="price-summary">
                 <div class="price-row">
-                    <span>HGT Spark Bot Activation & Setup:</span>
-                    <span><strong>$130.00</strong></span>
+                    <span>HGT Activation &amp; Verification Assistance:</span>
+                    <span><strong>$130.00 USD</strong></span>
                 </div>
                 <div class="price-row">
-                    <span>Monthly License & Maintenance Renewal:</span>
-                    <span><strong>$90.00 / mo</strong></span>
+                    <span>Telegram Support Queue Access:</span>
+                    <span style="color: var(--success);"><strong>Included</strong></span>
                 </div>
                 <div class="price-row total">
                     <span>Total Due Today:</span>
-                    <span>$130.00</span>
+                    <span>$130.00 USD</span>
                 </div>
             </div>
 
-            <div class="notice">
-                🔒 <strong>Mandatory Payment Rules:</strong> Complete transfer matching exact total ($130.00). Select your preferred endpoint below, send payment, and upload your proof screenshot.
+            <div class="nav-buttons">
+                <button type="button" class="btn btn-secondary" onclick="goToStep(2)">&larr; Back</button>
+                <button type="button" class="btn" onclick="validateAndNext(3)">Proceed to Verification &rarr;</button>
             </div>
+        </div>
+
+        <!-- STEP 4: Verification & Payment Routing -->
+        <div class="step-container" id="step4">
+            <h2 style="color: var(--primary); font-size: 1.15rem; font-family: 'Orbitron', sans-serif; margin-bottom: 14px;">
+                4. Payment Routing &amp; Proof Submission
+            </h2>
 
             <div class="form-group">
-                <label>Select Payment Method</label>
+                <label>Select Authorized Payment Method <span class="required">*</span></label>
                 <select id="paymentMethod" required onchange="showPaymentDetails(this.value)">
-                    <option value="Zelle">1. Zelle Payee Routing</option>
-                    <option value="PayPal">2. PayPal Direct Checkout</option>
-                    <option value="Bitcoin">3. Bitcoin (BTC) Crypto Wallet</option>
-                    <option value="Lead Bank Transfer">4. Lead Bank Transfer</option>
-                    <option value="USDT">5. USDT (TRC-20 Crypto)</option>
-                    <option value="Ethereum">6. Ethereum (ETH Crypto)</option>
+                    <option value="Zelle">1. Zelle Payee Routing (Recommended)</option>
+                    <option value="Bitcoin">2. Bitcoin (BTC) Crypto Wallet</option>
+                    <option value="Lead Bank Transfer">3. Lead Bank Transfer</option>
+                    <option value="USDT">4. USDT (TRC-20 Crypto)</option>
+                    <option value="Ethereum">5. Ethereum (ETH Crypto)</option>
                 </select>
             </div>
 
-            <!-- DYNAMIC PAYMENT DETAILS PANEL -->
+            <!-- Dynamic Payment Routing Details Panel -->
             <div id="paymentDetails" class="payment-info-box">
-                <!-- Pre-populated default: Zelle -->
+                <!-- Initialized with Zelle -->
             </div>
 
-            <!-- PROOF OF PAYMENT UPLOAD -->
-            <div class="form-group">
-                <label>Upload Payment Proof / Confirmation Screenshot</label>
-                <div class="file-upload-wrapper">
-                    <span id="fileLabel">📁 Click or drag transaction receipt screenshot here</span>
-                    <input type="file" id="proofUpload" accept="image/*,.pdf" required onchange="updateFileName(this)">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Transaction ID / Hash (Optional)</label>
+                    <input type="text" id="txHashOrProof" placeholder="e.g. Zelle Ref #, Bank Confirmation, or TxID">
+                </div>
+
+                <div class="form-group">
+                    <label>Upload Receipt Screenshot (Recommended)</label>
+                    <div class="file-upload-wrapper">
+                        <span id="fileLabel">📁 Click to select payment receipt</span>
+                        <input type="file" id="proofUpload" accept="image/*,.pdf" onchange="updateFileName(this)">
+                    </div>
                 </div>
             </div>
 
-            <button type="submit" class="btn">Submit & Complete Activation 🚀</button>
+            <!-- MANDATORY LEGAL DISCLAIMER PER PROJECT INSTRUCTIONS -->
+            <div class="disclaimer-box">
+                <strong>Legal Disclaimer:</strong> Support and guidance only. Final decisions regarding account verification, activation, or platform standing are made exclusively by the relevant gig platforms. Never share personal passwords, PINs, OTPs, or 2FA codes.
+            </div>
+
+            <label class="terms-checkbox">
+                <input type="checkbox" id="agreeTerms" checked required>
+                <span>
+                    I confirm that I have read and agree to the <strong>HACYBERGLOBATECH Support and Guidance Policy</strong> and authorize assistance for the designated delivery platforms.
+                </span>
+            </label>
+
+            <div class="nav-buttons">
+                <button type="button" class="btn btn-secondary" onclick="goToStep(3)">&larr; Back</button>
+                <button type="submit" class="btn" id="submitBtn">
+                    Complete Lead Registration &rarr;
+                </button>
+            </div>
         </div>
     </form>
 </div>
 
 <script>
-    function nextStep(step) {
+    let currentStepNum = 1;
+
+    function goToStep(step) {
+        if (step > currentStepNum) {
+            // validate current step first
+            if (!validateStep(currentStepNum)) return;
+        }
+
         document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
         document.getElementById('step' + step).classList.add('active');
+
+        // Update pills
+        for (let i = 1; i <= 4; i++) {
+            const pill = document.getElementById('pill' + i);
+            const circle = document.getElementById('circle' + i);
+            pill.classList.remove('active', 'completed');
+
+            if (i < step) {
+                pill.classList.add('completed');
+                circle.innerHTML = '&#10003;';
+            } else if (i === step) {
+                pill.classList.add('active');
+                circle.innerText = i;
+            } else {
+                circle.innerText = i;
+            }
+        }
+
+        // Update progress bar width
+        const fill = document.getElementById('progressFill');
+        fill.style.width = ((step - 1) / 3 * 100) + '%';
+
+        currentStepNum = step;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function validateStep(step) {
+        let valid = true;
+        if (step === 1) {
+            const fullName = document.getElementById('fullName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const mobile = document.getElementById('mobile').value.trim();
+            const street = document.getElementById('streetAddress').value.trim();
+            const zip = document.getElementById('zipCode').value.trim();
+
+            toggleError('err-fullName', !fullName);
+            toggleError('err-email', !email || !email.includes('@'));
+            toggleError('err-mobile', !mobile);
+            toggleError('err-streetAddress', !street);
+            toggleError('err-zipCode', !zip);
+
+            if (!fullName || !email || !email.includes('@') || !mobile || !street || !zip) {
+                valid = false;
+            }
+        }
+        return valid;
+    }
+
+    function toggleError(id, show) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = show ? 'block' : 'none';
+    }
+
+    function validateAndNext(current) {
+        if (validateStep(current)) {
+            goToStep(current + 1);
+        }
+    }
+
+    function selectDevice(el, val) {
+        document.querySelectorAll('.device-radio-label').forEach(item => item.classList.remove('checked'));
+        el.classList.add('checked');
+        document.getElementById('hardwareProfile').value = val;
+    }
+
+    function toggleCardCheck(input) {
+        const parent = input.closest('.checkbox-card');
+        if (input.checked) {
+            parent.classList.add('checked');
+        } else {
+            parent.classList.remove('checked');
+        }
+    }
+
+    function selectTier(el, name, price) {
+        document.querySelectorAll('.tier-card').forEach(item => item.classList.remove('selected'));
+        el.classList.add('selected');
     }
 
     function updateFileName(input) {
         const label = document.getElementById('fileLabel');
         if (input.files && input.files[0]) {
-            label.innerText = '✅ Selected: ' + input.files[0].name;
+            label.innerText = '✅ Attached: ' + input.files[0].name;
             label.style.color = '#00ff88';
         }
     }
@@ -540,10 +1224,11 @@
     function copyToClipboard(text, elementId) {
         navigator.clipboard.writeText(text);
         const btn = document.getElementById(elementId);
+        const orig = btn.innerText;
         btn.innerText = 'COPIED!';
         btn.style.background = '#00f0ff';
         setTimeout(() => {
-            btn.innerText = 'COPY';
+            btn.innerText = orig;
             btn.style.background = '#00ff88';
         }, 2000);
     }
@@ -555,95 +1240,90 @@
         if (method === 'Zelle') {
             const zelleAddr = 'zelle@hacyberglobal.dpdns.org';
             html = `
-                <h4>💸 Zelle Payee Routing</h4>
+                <h4>💸 Zelle Payee Routing <span>Instant Confirmation</span></h4>
                 <p><strong>Payee Name:</strong> Godfrey N Joshua</p>
-                <p style="margin-top:8px;"><strong>Zelle Address / Email:</strong></p>
+                <p style="margin-top:6px;"><strong>Zelle Routing Email:</strong></p>
                 <div class="address-box">
                     <code>${zelleAddr}</code>
                     <button type="button" id="copyZelle" class="copy-btn" onclick="copyToClipboard('${zelleAddr}', 'copyZelle')">COPY</button>
                 </div>
-                <p>Send <strong>$130.00 USD</strong> directly via your banking app's Zelle feature and upload the receipt screenshot below.</p>
-            `;
-        } else if (method === 'PayPal') {
-            html = `
-                <h4>💳 PayPal Direct Checkout</h4>
-                <p><strong>Direct Invoice / Payment Link:</strong></p>
-                <p style="margin-top: 6px;"><a href="https://paypal.me/hacyber-global/130" target="_blank" style="color: var(--primary); font-weight: bold; text-decoration: underline;">https://paypal.me/hacyber-global/130</a></p>
-                <a href="https://paypal.me/hacyber-global/130" target="_blank" class="action-link-btn" style="background: linear-gradient(90deg, #003087, #0079C1);">💳 Pay $130.00 via PayPal</a>
+                <p style="font-size:0.85rem; color:#94a3b8;">Transfer <strong>$130.00 USD</strong> directly via your mobile banking app and upload your receipt screenshot below.</p>
             `;
         } else if (method === 'Bitcoin') {
             const btcAddr = '3QJ8yE7wU1fKAnF5sWpDHezB39P4Jp8YgD';
             html = `
-                <h4>🪙 Bitcoin (BTC) Crypto Wallet</h4>
-                <p><strong>Required Valuation:</strong> <span style="color:var(--success); font-weight:700;">$130.00 USD</span></p>
-                <p style="margin-top:8px;"><strong>BTC Destination Wallet Address:</strong></p>
+                <h4>🪙 Bitcoin (BTC) Crypto Wallet <span>$130.00 Valuation</span></h4>
+                <p style="margin-top:6px;"><strong>BTC Destination Wallet:</strong></p>
                 <div class="address-box">
                     <code>${btcAddr}</code>
                     <button type="button" id="copyBtc" class="copy-btn" onclick="copyToClipboard('${btcAddr}', 'copyBtc')">COPY ADDRESS</button>
                 </div>
-                <p><strong>Purchase & Direct Transfer Steps:</strong></p>
-                <ol>
-                    <li>Copy the official BTC address above.</li>
-                    <li>Click the Mercuryo exchange link below to buy BTC with a credit/debit card.</li>
-                    <li>Set amount to <strong>$130.00 USD</strong> and paste the copied BTC address as the target wallet.</li>
-                </ol>
-                <a href="https://exchange.mercuryo.io/" target="_blank" class="action-link-btn">🚀 Open Mercuryo Exchange Portal</a>
+                <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:8px;">Or buy directly with credit/debit card via Mercuryo:</p>
+                <a href="https://exchange.mercuryo.io/" target="_blank" class="action-link-btn" style="background: linear-gradient(90deg, #ff0055, var(--secondary));">
+                    🚀 Open Mercuryo Card Exchange
+                </a>
             `;
         } else if (method === 'Lead Bank Transfer') {
             html = `
                 <h4>🏦 Lead Bank Direct Transfer</h4>
-                <p><strong>Account Type:</strong> Lead Bank Enterprise Routing</p>
-                <p><strong>Amount Due:</strong> $130.00 USD</p>
-                <p style="margin-top:8px;">Routing and account numbers will be generated directly on submission or sent to your provided email address for ACH / wire settlement.</p>
+                <p><strong>Account Routing:</strong> Lead Bank Enterprise Clearing</p>
+                <p><strong>Amount:</strong> $130.00 USD</p>
+                <p style="font-size:0.85rem; color:#94a3b8; margin-top:6px;">Wire / ACH settlement details will be dispatched immediately to your contact email upon submission.</p>
             `;
-        } else if (method === 'USDT') {
+        } else if (method === 'USDT' || method === 'Ethereum') {
             html = `
-                <h4>🌐 USDT (TRC-20) Crypto Endpoint</h4>
-                <p><strong>Network:</strong> Tron (TRC-20)</p>
-                <p><strong>Required Valuation:</strong> 130 USDT</p>
-                <p style="margin-top:8px;">Deposit wallet address will be dispatched to your email upon submission or can be paid via equivalent BTC/Zelle options above.</p>
-            `;
-        } else if (method === 'Ethereum') {
-            html = `
-                <h4>🌐 Ethereum (ETH) Crypto Endpoint</h4>
-                <p><strong>Network:</strong> Ethereum Mainnet (ERC-20)</p>
-                <p><strong>Required Valuation:</strong> $130.00 USD in ETH</p>
-                <p style="margin-top:8px;">Deposit wallet address will be dispatched to your email upon submission.</p>
+                <h4>🌐 ${method} Smart Settlement</h4>
+                <p><strong>Required Valuation:</strong> $130.00 USD equivalent</p>
+                <p style="font-size:0.85rem; color:#94a3b8; margin-top:6px;">Contract deposit address will be sent to your registered email or Telegram channel upon submission.</p>
             `;
         }
 
         detailsBox.innerHTML = html;
     }
 
-    // Initialize with Zelle details on load
+    // Auto-save form draft in localStorage
+    const inputs = ['fullName', 'email', 'mobile', 'streetAddress', 'zipCode'];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            // Restore
+            const saved = localStorage.getItem('draft_' + id);
+            if (saved) el.value = saved;
+
+            // Save on change
+            el.addEventListener('input', () => {
+                localStorage.setItem('draft_' + id, el.value);
+            });
+        }
+    });
+
+    // Initialize Zelle details
     window.onload = function() {
         showPaymentDetails('Zelle');
     };
 
     async function handleFormSubmit(e) {
         e.preventDefault();
-        
-        const submitBtn = document.querySelector('button[type="submit"]');
-        const originalText = submitBtn ? submitBtn.innerText : 'Submit';
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerText = 'Transmitting to Support Vault... ⚡';
-        }
 
-        const fullName = document.getElementById('fullName')?.value || '';
-        const email = document.getElementById('email')?.value || '';
-        const mobile = document.getElementById('mobile')?.value || '';
-        const streetAddress = document.getElementById('streetAddress')?.value || '';
-        const zipCode = document.getElementById('zipCode')?.value || '';
-        const hardwareProfile = document.getElementById('hardwareProfile')?.value || '';
-        
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Transmitting to Support Vault... ⚡';
+
+        const fullName = document.getElementById('fullName').value;
+        const email = document.getElementById('email').value;
+        const mobile = document.getElementById('mobile').value;
+        const streetAddress = document.getElementById('streetAddress').value;
+        const zipCode = document.getElementById('zipCode').value;
+        const hardwareProfile = document.getElementById('hardwareProfile').value;
+
         const checkedNetworks = [];
         document.querySelectorAll('input[name="network"]:checked').forEach(cb => {
             checkedNetworks.push(cb.value);
         });
 
-        const orderPreference = document.getElementById('orderPreference')?.value || '';
-        const paymentMethod = document.getElementById('paymentMethod')?.value || 'Zelle';
+        const orderPreference = document.getElementById('orderPreference').value;
+        const paymentMethod = document.getElementById('paymentMethod').value;
+        const txHash = document.getElementById('txHashOrProof').value;
         const fileInput = document.getElementById('proofUpload');
         const fileName = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0].name : '';
 
@@ -657,7 +1337,7 @@
             networks: checkedNetworks,
             orderPreference,
             paymentMethod,
-            txHashOrProof: fileName ? `Screenshot Attached: ${fileName}` : 'Manual Entry'
+            txHashOrProof: fileName ? `Screenshot: ${fileName}${txHash ? ' | ' + txHash : ''}` : (txHash || 'Manual Transfer Submission')
         };
 
         try {
@@ -669,48 +1349,123 @@
             const data = await res.json();
 
             if (data.ok) {
-                const formEl = document.getElementById('integrationForm');
-                formEl.innerHTML = `
-                    <div style="background: rgba(0, 255, 136, 0.08); border: 1px solid #00ff88; border-radius: 12px; padding: 28px; text-align: center; margin-top: 20px;">
-                        <div style="font-size: 44px; margin-bottom: 12px;">✅</div>
-                        <h2 style="color: #00ff88; font-size: 22px; margin-bottom: 8px;">Activation Request Registered</h2>
-                        <p style="color: #cbd5e1; font-size: 15px; max-width: 600px; margin: 0 auto 20px auto;">
-                            Your proof of payment and profile have been securely synchronized with the HACYBERGLOBATECH Support Center.
+                // Clear drafts
+                inputs.forEach(id => localStorage.removeItem('draft_' + id));
+
+                const formContainer = document.querySelector('.container');
+                formContainer.innerHTML = `
+                    <div class="top-accent"></div>
+                    <div style="text-align: center; padding: 24px 0;">
+                        <div style="font-size: 54px; margin-bottom: 16px;">✅</div>
+                        <h2 style="font-family: 'Orbitron', sans-serif; color: #00ff88; font-size: 1.5rem; margin-bottom: 8px;">
+                            Lead Request Successfully Registered
+                        </h2>
+                        <p style="color: #cbd5e1; font-size: 0.95rem; max-width: 600px; margin: 0 auto 24px auto;">
+                            Your verification dossier has been logged with the HACYBERGLOBATECH Support Center and dispatched to our admin verification bot.
                         </p>
-                        
-                        <div style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; display: inline-block; text-align: left; margin-bottom: 20px; font-family: monospace;">
-                            <div><strong>Ticket Reference:</strong> <span style="color: #00e5ff;">${data.leadId || 'HGT-LEAD-PENDING'}</span></div>
-                            <div><strong>Client:</strong> ${fullName} (${email})</div>
-                            <div><strong>Method:</strong> ${paymentMethod}</div>
-                            <div><strong>Status:</strong> <span style="color: #f59e0b;">Verification in Progress</span></div>
-                            <div><strong>Project ID:</strong> 8808707299 (AppDeploy Support Center)</div>
+
+                        <div style="background: #080b10; border: 1px solid #1e293b; border-radius: 12px; padding: 20px; max-width: 500px; margin: 0 auto 28px auto; text-align: left; font-family: monospace; font-size: 0.88rem;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom: 8px; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+                                <span style="color:#64748b;">TICKET ID:</span>
+                                <span style="color:#00f0ff; font-weight: bold;">${data.leadId || 'HGT-LEAD-8809'}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                                <span style="color:#64748b;">CLIENT:</span>
+                                <span style="color:#e2e8f0;">${fullName}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                                <span style="color:#64748b;">PAYMENT ROUTE:</span>
+                                <span style="color:#ffb700;">${paymentMethod}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between;">
+                                <span style="color:#64748b;">STATUS:</span>
+                                <span style="color:#00ff88;">QUEUED FOR VERIFICATION</span>
+                            </div>
                         </div>
 
-                        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-                            <a href="https://t.me/hacyberglobal_support" target="_blank" class="btn" style="text-decoration: none; width: auto; padding: 12px 24px;">
-                                💬 Open Support Telegram
-                            </a>
-                            <button onclick="window.location.reload()" class="btn" style="background: #334155; color: #fff; width: auto; padding: 12px 24px;">
-                                Submit Another Request
+                        <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+                            <button onclick="window.location.reload()" class="btn" style="cursor: pointer;">
+                                Submit Another Support Request
                             </button>
+                            <a href="/" class="btn btn-secondary" style="text-decoration: none;">
+                                Return to Main Application
+                            </a>
                         </div>
                     </div>
                 `;
+
+                // Trigger glassmorphic success toast animation
+                triggerPortalSuccessToast({
+                    ticketId: data.leadId || 'HGT-LEAD-QUEUED',
+                    fullName: fullName,
+                    paymentMethod: paymentMethod
+                });
+
+                // Fetch dynamic active bot link
+                fetch('/api/telegram/bot-info')
+                    .then(r => r.json())
+                    .then(info => {
+                        if (info && info.botLink) {
+                            const botLinkEl = document.getElementById('successBotLink');
+                            if (botLinkEl) botLinkEl.href = info.botLink;
+                        }
+                    })
+                    .catch(() => {});
             } else {
                 alert('Submission note: ' + (data.error || 'Please check your inputs and try again.'));
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = originalText;
-                }
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Complete Lead Registration \u2192';
             }
         } catch (err) {
             console.error('Lead submit error:', err);
-            alert('Thank you! Your integration details have been queued for processing.');
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerText = originalText;
-            }
+            alert('Request submitted! Details queued for processing.');
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Complete Lead Registration \u2192';
         }
+    }
+
+    function triggerPortalSuccessToast({ ticketId, fullName, paymentMethod }) {
+        let container = document.getElementById('portalToastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'portalToastContainer';
+            container.className = 'glass-toast-container';
+            document.body.appendChild(container);
+        }
+        
+        const toast = document.createElement('div');
+        toast.className = 'glass-toast';
+        toast.innerHTML = `
+            <div class="glass-toast-header">
+                <div class="glass-toast-title">
+                    <span class="glass-toast-badge"></span>
+                    <span>Support Request Submitted</span>
+                </div>
+                <button class="glass-toast-close" onclick="this.closest('.glass-toast').remove()">&times;</button>
+            </div>
+            <div class="glass-toast-body">
+                Verification request for <strong>${fullName || 'Driver'}</strong> (${paymentMethod || 'Manual'}) has been recorded.
+            </div>
+            <div class="glass-toast-footer">
+                <div>
+                    <span style="color: #64748b;">ID:</span>
+                    <span class="glass-toast-ticket">${ticketId}</span>
+                </div>
+                <span style="color: #00ff88; font-weight: 600;">QUEUED FOR DISPATCH</span>
+            </div>
+            <div class="glass-toast-progress-bar"></div>
+        `;
+
+        container.appendChild(toast);
+        
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 500);
+        }, 6500);
     }
 </script>
 

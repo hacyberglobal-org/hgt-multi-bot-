@@ -3,7 +3,7 @@ import {
   Activity, Wifi, WifiOff, Search, Filter, Clock, Zap, RefreshCw,
   AlertTriangle, CheckCircle2, XCircle, Download, Trash2, X,
   Server, ShieldAlert, ArrowDownUp, Radio, FileText, Check, Copy, TrendingUp, BarChart2,
-  Archive, RotateCcw, Box, HardDrive, GitCompare, Calendar, Table
+  Archive, RotateCcw, Box, HardDrive, GitCompare, Calendar, Table, Terminal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -56,6 +56,7 @@ export interface WebexConnectivityLogProps {
   webexLatencyThreshold?: number;
   onThresholdChange?: (val: number) => void;
   webexStatusHistory?: { status: string; timestamp: string }[];
+  onOpenHandshakeModal?: () => void;
 }
 
 const INITIAL_EVENTS: WebexHeartbeatEvent[] = [
@@ -164,7 +165,8 @@ export default function WebexConnectivityLog({
   webexPingMs = 32,
   webexStatus = 'Connected',
   webexLatencyThreshold = 80,
-  onThresholdChange
+  onThresholdChange,
+  onOpenHandshakeModal
 }: WebexConnectivityLogProps) {
   const [events, setEvents] = useState<WebexHeartbeatEvent[]>(INITIAL_EVENTS);
   const [archivedEvents, setArchivedEvents] = useState<WebexHeartbeatEvent[]>(() => {
@@ -1078,6 +1080,19 @@ export default function WebexConnectivityLog({
                 <Download className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="whitespace-nowrap">EXPORT CSV</span>
               </button>
+
+              {onOpenHandshakeModal && (
+                <button
+                  id="btn-open-handshake-events-from-log"
+                  type="button"
+                  onClick={onOpenHandshakeModal}
+                  className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/50 font-black text-[10px] rounded-lg transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(59,130,246,0.2)] cursor-pointer"
+                  title="Open detailed connection handshake events & timestamped error codes"
+                >
+                  <Terminal className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="whitespace-nowrap">HANDSHAKE EVENTS</span>
+                </button>
+              )}
 
               {onClose && (
                 <button

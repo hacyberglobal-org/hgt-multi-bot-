@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { triggerSupportSuccessToast } from '../lib/supportToastManager';
 import { 
   Bot, 
   Shield, 
@@ -393,6 +394,15 @@ export const BotGrabberAnalyst: React.FC<BotGrabberAnalystProps> = ({
       const data = await res.json();
       if (data.ok) {
         onAddLog('info', `🎫 Support Analyst Escalation Ticket created: ${data.ticket.id} (${ticketSubject})`, undefined, 'TICKET_CREATED');
+        
+        triggerSupportSuccessToast({
+          ticketId: data.ticket.id,
+          title: 'Support Escalation Ticket Created',
+          clientName: 'Lead Support Operator',
+          serviceTier: ticketPriority.toUpperCase(),
+          message: `Ticket "${ticketSubject}" dispatched to the active support analyst queue.`
+        });
+
         setIsNewTicketModalOpen(false);
         setTicketSubject('');
         setTicketNotes('');

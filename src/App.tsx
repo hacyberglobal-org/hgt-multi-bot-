@@ -8,7 +8,6 @@ import SparkFilters from './components/SparkFilters';
 import ActiveOffers from './components/ActiveOffers';
 import SparkLogs from './components/SparkLogs';
 import EducationalInfo from './components/EducationalInfo';
-import PaypalSetup from './components/PaypalSetup';
 import StripeSetup from './components/StripeSetup';
 import DepositSetup from './components/DepositSetup';
 import PlatformSetup from './components/PlatformSetup';
@@ -28,6 +27,7 @@ import MultiPlatformChat from './components/MultiPlatformChat';
 import RealDriverConnector from './components/RealDriverConnector';
 import { BotGrabberAnalyst } from './components/BotGrabberAnalyst';
 import WebexConnectivityLog from './components/WebexConnectivityLog';
+import WebexHandshakeEventsModal from './components/WebexHandshakeEventsModal';
 import SystemHealthSnapshot from './components/SystemHealthSnapshot';
 import ThemeCustomizer, { applyThemePreset } from './components/ThemeCustomizer';
 import { playOfferAlert, preDecodeCustomSounds, playWebexAlert, unlockAudioContext, isMasterMuted, setMasterMute } from './lib/audioManager';
@@ -39,6 +39,9 @@ import HeaderThemeSwitcher from './components/HeaderThemeSwitcher';
 import { GoogleDriveIntegration } from './components/GoogleDriveIntegration';
 import { AuthorizedIntegrations } from './components/AuthorizedIntegrations';
 import { GoogleWorkspaceHub } from './components/GoogleWorkspaceHub';
+import SupportSuccessToast, { SupportToastData } from './components/SupportSuccessToast';
+import { supportToastManager } from './lib/supportToastManager';
+import LeadIntakeModal from './components/LeadIntakeModal';
 import { ShieldCheck, Laptop, Wifi, Radio, RefreshCw, AlertOctagon, HelpCircle, Copy, Check, Globe, Sliders, QrCode, Bell, Bot, Box, History, Activity, Zap, X, Download, Battery, BatteryCharging, BatteryWarning, Cpu, Layers, Terminal, Search, Sun, Moon, Wallet, Volume2, VolumeX, CreditCard, Phone, Cloud, FileText, Trash2, Palette, FileSpreadsheet, MessageSquare, Car, UserCheck, HardDrive } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -180,11 +183,22 @@ export default function App() {
   const [metaAiLastSync, setMetaAiLastSync] = useState<string>('2026-08-05 17:07 UTC');
   const [isTestingMetaAi, setIsTestingMetaAi] = useState<boolean>(false);
 
-  const [brandingTab, setBrandingTab] = useState<'domain' | 'paypal' | 'stripe' | 'deposit' | 'alerts' | 'devices' | 'orderRequest' | 'payloader' | 'clientHq' | 'wallet' | 'voice' | 'connect' | 'deploy' | 'chat' | 'drivers' | 'botGrabber' | 'drive' | 'integrations' | 'workspace'>('workspace');
+  const [brandingTab, setBrandingTab] = useState<'domain' | 'stripe' | 'deposit' | 'alerts' | 'devices' | 'orderRequest' | 'payloader' | 'clientHq' | 'wallet' | 'voice' | 'connect' | 'deploy' | 'chat' | 'drivers' | 'botGrabber' | 'drive' | 'integrations' | 'workspace'>('workspace');
   const [feedTab, setFeedTab] = useState<'live' | 'history'>('live');
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
   });
+
+  // --- SUPPORT REQUEST SUCCESS TOAST & INTAKE MODAL STATE ---
+  const [supportToast, setSupportToast] = useState<SupportToastData | null>(null);
+  const [isSupportIntakeOpen, setIsSupportIntakeOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const unsubscribe = supportToastManager.subscribe((t) => {
+      setSupportToast(t);
+    });
+    return unsubscribe;
+  }, []);
 
   // --- GLOBAL SEARCH MODAL STATE & KEYBOARD LISTENER ---
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState<boolean>(false);
@@ -426,8 +440,6 @@ export default function App() {
         setBrandingTab('chat');
       } else if (hash === '#domain') {
         setBrandingTab('domain');
-      } else if (hash === '#paypal') {
-        setBrandingTab('paypal');
       } else if (hash === '#alerts') {
         setBrandingTab('alerts');
       } else if (hash === '#wallet') {
@@ -701,6 +713,7 @@ export default function App() {
   const [pingTooltip, setPingTooltip] = useState<string | null>(null);
   const [isLatencyChartModalOpen, setIsLatencyChartModalOpen] = useState<boolean>(false);
   const [isWebexConnectivityLogModalOpen, setIsWebexConnectivityLogModalOpen] = useState<boolean>(false);
+  const [isWebexHandshakeModalOpen, setIsWebexHandshakeModalOpen] = useState<boolean>(false);
   const [webexDropCount, setWebexDropCount] = useState<number>(2); // tracks connection drops since session started, starts with 2 to align with default error records
 
   // --- BATTERY STATUS & LOW POWER MODE MONITORING STATES ---
@@ -902,7 +915,6 @@ export default function App() {
       
       const platformsConfig = loadMessagingPlatforms();
       const btcAddr = localStorage.getItem('spark_bot_btc_address') || 'bc1qxy2kg3ut7nd673j6vfvjtpx6kwsyudh8t6fsp0';
-      const bPaypal = localStorage.getItem('spark_bot_paypal_link') || 'https://paypal.me/hacyber-global/130';
       const sAmount = localStorage.getItem('spark_bot_payment_amount') || '130.00';
       const payeeName = localStorage.getItem('spark_bot_payee_name') || 'Godfrey N Joshua';
       const tgToken = localStorage.getItem('spark_bot_billing_token') || '8676025127:AAHDojtnvoghlky30qPrdxdrWMvblTlB8xA';
@@ -919,7 +931,7 @@ export default function App() {
 
       if (includeBilling) {
         leadMsg += `\n\n🛡️ AUTO-PAYMENT ACTIVATION REQUEST:\nTo secure and unlock your authorized mobile bot instance, transfer the $${sAmount} USD subscription fee.` +
-              `\n\n🏦 Payee: ${payeeName}\n💳 PayPal Checkout Link:\n${bPaypal}\n🪙 Bitcoin Wallet Address:\n${btcAddr}\n\n📨 Upload your transaction proof receipt / hash to the verification hub once completed!`;
+              `\n\n🏦 Payee: ${payeeName}\n🪙 Bitcoin Wallet Address:\n${btcAddr}\n\n📨 Upload your transaction proof receipt / hash to the verification hub once completed!`;
       }
             
       const tgLeadBroadcastsEnabled = localStorage.getItem('spark_bot_tg_lead_broadcasts_enabled') === 'true';
@@ -928,7 +940,7 @@ export default function App() {
         if (tgEnabled && tgLeadBroadcastsEnabled) {
           addLog(
             'info',
-            `📡 TELEGRAM NOTIFICATION: Lead details and PayPal/Bitcoin payment instructions ($${sAmount}) successfully transmitted to subscriber channels.`,
+            `📡 TELEGRAM NOTIFICATION: Lead details and payment instructions ($${sAmount}) successfully transmitted to subscriber channels.`,
             newOffer.id,
             'TG_LEAD_DISPATCH'
           );
@@ -2145,15 +2157,23 @@ export default function App() {
                 {isMutedAll ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
               </button>
 
-              {/* Dark/Light mode theme toggle */}
+              {/* Support Request & Verification Intake Modal Trigger */}
               <button
-                id="telegram-status-modal-toggle"
+                id="support-intake-modal-toggle"
                 type="button"
-                onClick={() => setTelegramStatusModalOpen(true)}
-                className="w-7 h-7 bg-neutral-900 border border-neutral-850 rounded flex items-center justify-center text-neutral-400 hover:text-[#00f2ff] hover:border-[#00f2ff]/40 hover:bg-neutral-800 transition-all cursor-pointer hover:scale-105 active:scale-95 shrink-0"
-                title="Open Telegram Billing Bot Status"
+                onClick={() => {
+                  setIsSupportIntakeOpen(true);
+                  addLog('info', '📝 Opened Driver Support & Activation Intake Portal.', undefined, 'SUPPORT_INTAKE');
+                }}
+                className={`h-7 px-2 bg-neutral-900 border rounded flex items-center gap-1.5 transition-all cursor-pointer hover:scale-105 active:scale-95 shrink-0 text-[9px] font-mono font-bold ${
+                  isSupportIntakeOpen
+                    ? 'border-emerald-500/80 text-emerald-400 bg-emerald-500/10 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                    : 'border-neutral-850 text-neutral-400 hover:text-[#00f2ff] hover:border-[#00f2ff]/40 hover:bg-neutral-800'
+                }`}
+                title="Submit Support Request & Driver Verification"
               >
-                <Bot className="w-3.5 h-3.5" />
+                <ShieldCheck className="w-3.5 h-3.5 text-[#00f2ff]" />
+                <span className="hidden md:inline">SUPPORT INTAKE</span>
               </button>
 
               {/* Guided Onboarding Help Button */}
@@ -2189,6 +2209,18 @@ export default function App() {
                 title="Open real-time latency performance chart"
               >
                 <Activity className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Cisco Webex Handshake Events & Error Codes Modal Toggle Button */}
+              <button
+                id="webex-handshake-events-toggle-btn"
+                type="button"
+                onClick={() => setIsWebexHandshakeModalOpen(true)}
+                className="h-7 px-2 bg-neutral-900 border border-neutral-800 hover:border-[#00f2ff]/50 hover:bg-[#00f2ff]/10 rounded flex items-center gap-1.5 text-neutral-400 hover:text-[#00f2ff] transition-all cursor-pointer hover:scale-105 active:scale-95 shrink-0 text-[9px] font-mono font-bold"
+                title="Open Cisco Webex API Connection Handshake Events & Timestamped Error Codes"
+              >
+                <Terminal className="w-3.5 h-3.5 text-[#00f2ff]" />
+                <span className="hidden xl:inline">HANDSHAKES</span>
               </button>
 
               {/* Real-time Webex Command Execution Queue Indicator */}
@@ -2902,6 +2934,21 @@ export default function App() {
                           <Radio className="w-3 h-3 text-[#00f2ff] animate-pulse" />
                           <span>WEBEX CONNECTIVITY LOG</span>
                         </button>
+
+                        {/* Open Webex Handshake Events & Error Codes Modal Button */}
+                        <button
+                          id="btn-open-webex-handshake-modal-tooltip"
+                          type="button"
+                          onClick={() => {
+                            setIsWebexTooltipOpen(false);
+                            setIsWebexHandshakeModalOpen(true);
+                          }}
+                          className="w-full mt-1.5 py-1.5 px-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/40 text-blue-300 rounded font-mono text-[8.5px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-[0_0_10px_rgba(59,130,246,0.15)]"
+                          title="Open searchable Cisco Webex connection handshake events & timestamped error codes"
+                        >
+                          <Terminal className="w-3 h-3 text-blue-400" />
+                          <span>HANDSHAKE EVENTS & ERRORS</span>
+                        </button>
                       </div>
 
 
@@ -3266,19 +3313,6 @@ export default function App() {
                       >
                         <Globe className="w-2.5 h-2.5 shrink-0" />
                         <span>1. DNS</span>
-                      </button>
-                      <button
-                        type="button"
-                        id="branding-tab-paypal-btn"
-                        onClick={() => setBrandingTab('paypal')}
-                        className={`flex-1 min-w-[75px] flex items-center justify-center gap-1 py-1.5 rounded-lg text-[8.5px] font-mono font-bold transition-all cursor-pointer ${
-                          brandingTab === 'paypal'
-                            ? 'bg-amber-500 text-neutral-950 shadow-md'
-                            : 'bg-neutral-950/40 hover:bg-neutral-850 text-neutral-400 hover:text-neutral-200 border border-neutral-900/60'
-                        }`}
-                      >
-                        <Sliders className="w-2.5 h-2.5 shrink-0" />
-                        <span>2. PAYPAL</span>
                       </button>
                       <button
                         type="button"
@@ -4000,8 +4034,6 @@ export default function App() {
                           </a>
                         </div>
                       </>
-                    ) : brandingTab === 'paypal' ? (
-                      <PaypalSetup activeDomain={activeDomain} onAddLog={addLog} />
                     ) : brandingTab === 'stripe' ? (
                       <StripeSetup activeDomain={activeDomain} onAddLog={addLog} />
                     ) : brandingTab === 'deposit' ? (
@@ -4153,6 +4185,16 @@ export default function App() {
         webexLatencyThreshold={webexLatencyThreshold}
         onThresholdChange={setWebexLatencyThreshold}
         webexStatusHistory={webexStatusHistory}
+        onOpenHandshakeModal={() => setIsWebexHandshakeModalOpen(true)}
+      />
+
+      {/* Cisco Webex API Handshake Events & Timestamped Error Codes Modal */}
+      <WebexHandshakeEventsModal
+        isOpen={isWebexHandshakeModalOpen}
+        onClose={() => setIsWebexHandshakeModalOpen(false)}
+        onAddLog={addLog}
+        currentPingMs={webexPingMs}
+        webexStatus={webexStatus}
       />
 
       {/* Critical Latency Warning Overlay triggered by 3+ consecutive high heartbeat cycles */}
@@ -4377,6 +4419,28 @@ export default function App() {
           setBrandingTab(tab);
         }}
       />
+
+      {/* Custom Glassmorphic Support Request Success Toast */}
+      <SupportSuccessToast
+        toast={supportToast}
+        onDismiss={() => supportToastManager.dismiss()}
+      />
+
+      {/* Driver Activation & Support Request Intake Modal */}
+      {isSupportIntakeOpen && (
+        <LeadIntakeModal
+          isOpen={isSupportIntakeOpen}
+          onClose={() => setIsSupportIntakeOpen(false)}
+          onLeadSubmitted={(data) => {
+            addLog(
+              'bot_accept',
+              `✅ Driver Support & Verification Request submitted: ${data.leadId || 'HGT-LEAD'} (${data.lead?.fullName || 'Driver'})`,
+              undefined,
+              'SUPPORT_SUBMIT'
+            );
+          }}
+        />
+      )}
 
     </div>
   );
