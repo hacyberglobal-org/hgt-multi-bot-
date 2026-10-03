@@ -2774,7 +2774,7 @@ Operator Query: ${prompt || 'Perform full diagnostic review on jitter, grab rate
         developmentAppDeployUrl: 'https://ais-dev-dlxtcm22exfd5ssxaa6siv-201471674421.us-east5.run.app'
       },
       git: {
-        repository: 'https://github.com/hacyber-global/hgt-spark-bot.git',
+        repository: 'https://github.com/hacyberglobal-org/hgt-multi-bot-.git',
         branch: 'main',
         status: 'CONNECTED'
       },
@@ -2787,7 +2787,7 @@ Operator Query: ${prompt || 'Perform full diagnostic review on jitter, grab rate
         }
       },
       services: {
-        github: { status: 'CONNECTED', branch: 'main', repo: 'hacyber-global/hgt-spark-bot' },
+        github: { status: 'CONNECTED', branch: 'main', repo: 'hacyberglobal-org/hgt-multi-bot-' },
         appdeploy: { status: 'CONNECTED', id: process.env.APPDEPLOY_PROJECT_ID || '8808707299' },
         cloudflare: { status: 'CONFIGURED', nameservers: ['anirban.ns.cloudflare.com', 'cecelia.ns.cloudflare.com'] },
         supabase: supabaseHealth,

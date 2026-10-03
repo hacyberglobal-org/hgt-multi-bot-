@@ -503,7 +503,7 @@ export default function DeployPipeline({ activeDomain, onAddLog }: DeployPipelin
                 type="text"
                 value={gitRemoteInput}
                 onChange={(e) => setGitRemoteInput(e.target.value)}
-                placeholder="https://github.com/hacybertech/multi-bot.git"
+                placeholder="https://github.com/hacyberglobal-org/hgt-multi-bot-.git"
                 className="flex-1 bg-neutral-950 border border-neutral-800 rounded px-2.5 py-1.5 text-[9.5px] font-mono text-white placeholder-neutral-600 focus:outline-none focus:border-cyan-500"
               />
               <button
