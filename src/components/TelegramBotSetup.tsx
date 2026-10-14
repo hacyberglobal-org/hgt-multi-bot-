@@ -564,28 +564,14 @@ export default function TelegramBotSetup({
       if (data.ok) {
         onAddLog('info', `✅ OUTREACH DISPATCHED! Customer rules, Stripe checkout, and Bitcoin wallet coordinates dispatched to ${prospectUsername} via billing bot.`, undefined, 'OUTREACH_OK');
       } else {
-        onAddLog('info', `✅ OUTREACH SIMULATED (SANDBOX): Custom payment terms & rules packet successfully relayed into pipeline for lead ${prospectUsername} (${prospectPhone}).`, undefined, 'OUTREACH_SIM');
+        onAddLog('warning', 'Telegram did not confirm customer outreach delivery; no success was recorded.', undefined, 'OUTREACH_FAIL');
       }
     } catch (e) {
-      onAddLog('info', `✅ OUTREACH SIMULATED (SANDBOX): Custom payment terms & rules packet successfully relayed into pipeline for lead ${prospectUsername} (${prospectPhone}).`, undefined, 'OUTREACH_SIM');
+      onAddLog('warning', 'Telegram did not confirm customer outreach delivery; no success was recorded.', undefined, 'OUTREACH_FAIL');
     }
 
-    // Automatically trigger a pending receipt submission from this user to allow full preview loop
-    setTimeout(() => {
-      onAddLog('warning', `🔔 NEW ACTIONABLE TICKET: Customer ${prospectUsername} submitted payment proof receipt ($${parseFloat(paymentAmount).toFixed(2)} - ${bitcoinAddress ? 'Bitcoin' : 'Zelle'}). Review the pending receipt below!`, undefined, 'TICKET_RECVD');
-      
-      const newRec: ReceiptRecord = {
-        id: `rec_${Date.now()}`,
-        customerHandle: prospectUsername,
-        customerPhone: prospectPhone,
-        method: Math.random() > 0.5 ? 'Bitcoin' : 'Zelle',
-        amountText: parseFloat(paymentAmount).toFixed(2),
-        status: 'pending',
-        timestamp: 'Just now',
-        txHashOrProof: Math.random() > 0.5 ? `TXN_BTC_${Math.floor(Math.random()*10000000).toString(16).toUpperCase()}` : `ZEL_REF_${Math.floor(Math.random()*10000000).toString(16).toUpperCase()}`
-      };
-      setReceiptQueue(prev => [newRec, ...prev]);
-    }, 3000);
+    // Receipt records must originate from real customer submissions; never fabricate payment evidence.
+    onAddLog('info', 'Awaiting a real customer receipt submission; no receipt was generated.', undefined, 'RECEIPT_AWAITING_REAL_SUBMISSION');
   };
 
   const handleApproveReceipt = async (id: string, customerHandle: string, amount: string, method: string) => {
