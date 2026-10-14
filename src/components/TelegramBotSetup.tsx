@@ -509,13 +509,13 @@ export default function TelegramBotSetup({
       }
     } catch (e) {
       setTimeout(() => {
-        setBillingStatus('simulated');
+        setBillingStatus('failed');
         setBillingTestLogs(prev => [
           ...prev,
-          `⚠️ Live network requests CORS protected. Simulation fallback active.`,
-          `✅ MOCK INTERNET ACCESS ACCEPTED: Secondary custom billing bot linked on Chat ID: ${billingChatId}!`
+          `⚠️ Telegram connection could not be verified.`,
+          `No message was sent; verify the server-side Telegram integration.`
         ]);
-        onAddLog('info', `✅ BILLING BOT STANDBY (SANDBOX): Customer bot synced successfully. Ready to dispatch rules & rates.`, undefined, 'TG_BILL_PROBE_SIM');
+        onAddLog('warning', `Telegram billing bot connection unverified; no message was sent.`, undefined, 'TG_BILL_PROBE_FAIL');
       }, 1000);
     }
   };
