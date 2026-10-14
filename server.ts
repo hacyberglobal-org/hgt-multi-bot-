@@ -1643,7 +1643,7 @@ async function startServer() {
   let realDriversStore: any[] = [];
 
   // GET /api/drivers - List all connected driver accounts
-  app.get("/api/drivers", (req, res) => {
+  app.get("/api/drivers", requireAuth, (req, res) => {
     res.json({
       ok: true,
       totalDrivers: realDriversStore.length,
@@ -1670,6 +1670,12 @@ async function startServer() {
   });
 
   app.post("/api/drivers/webhook/:driverId", (req, res) => {
+    const expectedSecret = process.env.DRIVER_WEBHOOK_SECRET || "";
+    const suppliedSecret = req.header("x-driver-webhook-secret") || "";
+    if (!expectedSecret) return res.status(503).json({ ok: false, error: "Driver webhook secret is not configured." });
+    const expectedBytes = Buffer.from(expectedSecret);
+    const suppliedBytes = Buffer.from(suppliedSecret);
+    if (expectedBytes.length !== suppliedBytes.length || !timingSafeEqual(expectedBytes, suppliedBytes)) return res.status(401).json({ ok: false, error: "Invalid driver webhook secret." });
     const { driverId } = req.params;
     const payload = req.body;
     console.log(`[Driver Webhook] Event received for driver ${driverId}:`, payload);
@@ -2079,33 +2085,16 @@ Operator Query: ${prompt || 'Perform full diagnostic review on jitter, grab rate
   // HACYBERGLOBATECH INTEGRATION SERVICES: AppDeploy, Domains, Leads, Supabase
   // ===================================================================
 
-  const leadsStore: Array<any> = [
-    {
-      id: 'HGT-LEAD-880101',
-      fullName: 'Marcus Vance',
-      email: 'm.vance@logistics-pilot.io',
-      mobile: '+1 (469) 555-0198',
-      streetAddress: '1420 Commerce St',
-      zipCode: '75201',
-      hardwareProfile: 'iPhone (iOS)',
-      networks: ['Walmart Spark', 'DoorDash'],
-      orderPreference: 'High-Value Priority Orders ($30+)',
-      paymentMethod: 'Zelle',
-      status: 'verified',
-      createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-      telegramNotified: true,
-      supabaseSynced: false
-    }
-  ];
+  const leadsStore: Array<any> = [];
 
   // 1. AppDeploy Project & Environment Information Endpoint
   app.get("/api/appdeploy/project", async (req, res) => {
     const supabaseHealth = await checkSupabaseHealth();
     res.json({
       ok: true,
-      projectId: process.env.APPDEPLOY_PROJECT_ID || '8808707299',
+      projectId: process.env.APPDEPLOY_PROJECT_ID || null,
       appName: process.env.APPDEPLOY_APP_NAME || 'HACYBERGLOBATECH Activation & Verification Support Center',
-      status: 'ACTIVE_PRODUCTION',
+      status: 'UNVERIFIED',
       ingressHost: 'ais-pre-dlxtcm22exfd5ssxaa6siv-201471674421.us-east5.run.app',
       domains: {
         mainWebsite: process.env.MAIN_WEBSITE_URL || 'https://web.hacyberglobal.dgdns.org/',
