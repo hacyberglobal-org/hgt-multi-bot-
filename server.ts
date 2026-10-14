@@ -28,20 +28,10 @@ import { getOrCreateUser, getUserProfile, logUserActivity, getUserActivityLogs }
 
 dotenv.config({ override: true });
 
-// Always ensure the user-provided console secret takes active precedence
-if (process.env.CONSOLE_SECRET) {
+// Provider credentials must be configured through the deployment secret manager.
+// Never ship real or placeholder credentials as source-code fallbacks.
+if (process.env.CONSOLE_SECRET && !process.env.GEMINI_API_KEY) {
   process.env.GEMINI_API_KEY = process.env.CONSOLE_SECRET;
-} else if (!process.env.GEMINI_API_KEY) {
-  process.env.GEMINI_API_KEY = 'AQ.Ab8RN6K8yA1QorstO1pqEcZvCmOyV6TNpaW70d1GHAQIkSNRgg';
-  process.env.CONSOLE_SECRET = 'AQ.Ab8RN6K8yA1QorstO1pqEcZvCmOyV6TNpaW70d1GHAQIkSNRgg';
-}
-
-// Ensure Cloudflare API Token and Token ID are configured
-if (!process.env.CLOUDFLARE_API_TOKEN) {
-  process.env.CLOUDFLARE_API_TOKEN = 'b799deb57374c604cec6c71ed06747d49535d761e1d8602244dac1edfb6b6cb6';
-}
-if (!process.env.CLOUDFLARE_TOKEN_ID) {
-  process.env.CLOUDFLARE_TOKEN_ID = '2966e15e0df3b4d3a747d6e0efb7802c';
 }
 
 // Lazy initialization of Gemini API client
