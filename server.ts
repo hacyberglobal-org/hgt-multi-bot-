@@ -1512,58 +1512,12 @@ async function startServer() {
     }
   });
 
-  app.post('/api/stripe/instant-payout', async (req, res) => {
-    try {
-      const { amount, method, recipient, stripeAccountId } = req.body;
-      const stripe = getStripe();
-
-      const payoutId = `po_${Math.random().toString(36).substring(2, 10)}${Date.now().toString().slice(-4)}`;
-      const timestamp = new Date().toISOString();
-
-      if (stripe && stripeAccountId) {
-        try {
-          const payout = await stripe.payouts.create(
-            {
-              amount: Math.round((amount || 0) * 100),
-              currency: 'usd',
-              method: 'instant',
-              statement_descriptor: 'HGT INSTANT PAYOUT',
-            },
-            {
-              stripeAccount: stripeAccountId,
-            }
-          );
-          return res.json({
-            ok: true,
-            payoutId: payout.id,
-            amount: payout.amount / 100,
-            status: payout.status === 'paid' ? 'Completed' : 'Settling',
-            method: method || 'Instant Debit',
-            recipient: recipient || 'Linked Bank/Debit Card',
-            arrivalDate: 'Instant (0-30 seconds)',
-            timestamp,
-            liveStripe: true
-          });
-        } catch (err: any) {
-          console.warn("Stripe instant payout attempt error, returning instant settlement payload:", err.message);
-        }
-      }
-
-      // Return instant payout settlement confirmation
-      res.json({
-        ok: true,
-        payoutId,
-        amount: Number(amount || 0),
-        status: 'Completed',
-        method: method || 'Instant Settlement',
-        recipient: recipient || 'Linked Account',
-        arrivalDate: 'Instant (0-30 seconds)',
-        timestamp,
-        liveStripe: false
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
+  app.post('/api/stripe/instant-payout', requireAuth, (_req, res) => {
+    return res.status(503).json({
+      ok: false,
+      paid: false,
+      error: "Instant payouts are disabled until the signed-in user's Stripe account ownership, payout eligibility, and live provider response can be verified."
+    });
   });
 
   app.post('/api/dns-lookup', async (req, res) => {
