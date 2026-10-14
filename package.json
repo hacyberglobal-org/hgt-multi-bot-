@@ -10,7 +10,8 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "deploy:cloudflare": "npm run build && npx wrangler pages deploy dist --project-name=hgt-spark-bot-edge",
-    "git:push": "git init && git add . && git commit -m 'deploy all setup' && git branch -M main && git remote add origin https://github.com/hacyber-global/hgt-spark-bot.git && git push -u origin main"
+    "git:push": "git init && git add . && git commit -m 'deploy all setup' && git branch -M main && git remote add origin https://github.com/hacyber-global/hgt-spark-bot.git && git push -u origin main",
+    "test:security": "node --test tests/security-config.test.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
