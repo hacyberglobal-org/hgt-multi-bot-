@@ -1943,7 +1943,7 @@ export default function App() {
         webexDropCount,
         webexErrors,
         webexStatusHistory,
-        telegramToken: localStorage.getItem('spark_bot_tg_token') || '8737167779:AAE2WWVpZcQP-wJvilmvXFi-EP1C7zpe0WE',
+        telegramToken: localStorage.getItem('spark_bot_tg_token') || '',
         telegramChatId: localStorage.getItem('spark_bot_tg_chat_id') || '1056428327'
       });
       toast.success('Connection Audit Report downloaded successfully!');
