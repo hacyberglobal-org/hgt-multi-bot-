@@ -1521,70 +1521,35 @@ async function startServer() {
   });
 
   app.post('/api/dns-lookup', async (req, res) => {
-    const { domain } = req.body;
-    if (!domain) {
-      return res.status(400).json({ error: "Domain parameter is required" });
+    const domain = String(req.body?.domain || '').trim().toLowerCase().replace(/\.$/, '');
+    if (!domain || domain.length > 253 || !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(domain)) {
+      return res.status(400).json({ ok: false, error: "A valid DNS hostname is required." });
     }
 
     try {
-      const dnsPromises = dns.promises;
-      let cname: string[] = [];
-      let txt: string[][] = [];
-      let ns: string[] = [];
-      let a: string[] = [];
-
-      try {
-        cname = await dnsPromises.resolveCname(domain);
-      } catch (e) {}
-
-      try {
-        txt = await dnsPromises.resolveTxt(domain);
-      } catch (e) {}
-
-      try {
-        ns = await dnsPromises.resolveNs(domain);
-      } catch (e) {}
-
-      try {
-        a = await dnsPromises.resolve4(domain);
-      } catch (e) {}
-
-      const nameServers = [
-        { name: "Google Public DNS", ip: "8.8.8.8", status: cname.length || a.length ? "propagated" : "propagating", latency: "12ms" },
-        { name: "Cloudflare DNS", ip: "1.1.1.1", status: cname.length || a.length ? "propagated" : "propagating", latency: "8ms" },
-        { name: "OpenDNS", ip: "208.67.222.222", status: cname.length || a.length ? "propagated" : "propagating", latency: "15ms" },
-        { name: "Quad9 DNS", ip: "9.9.9.9", status: cname.length || a.length ? "propagated" : "propagating", latency: "18ms" }
-      ];
-
-      res.json({
+      const results = await Promise.allSettled([
+        dns.promises.resolveCname(domain),
+        dns.promises.resolveTxt(domain),
+        dns.promises.resolveNs(domain),
+        dns.promises.resolve4(domain)
+      ]);
+      const value = (index: number) => results[index].status === 'fulfilled' ? results[index].value : [];
+      const records = {
+        CNAME: value(0),
+        TXT: (value(1) as string[][]).map((parts: string[]) => parts.join(' ')),
+        NS: value(2),
+        A: value(3)
+      };
+      const recordCount = records.CNAME.length + records.TXT.length + records.NS.length + records.A.length;
+      return res.json({
+        ok: true,
         domain,
-        records: {
-          CNAME: cname.length ? cname : ["hacyber-global.github.io"],
-          TXT: txt.length ? txt.map(t => t.join(" ")) : ["google-site-verification=n7ECyUmQagKB2NSjhm0UWuVnhhvYdxWQH5ez_l2F75w", "v=spf1 include:_spf.mx.cloudflare.net ~all"],
-          NS: ns.length ? ns : ["anirban.ns.cloudflare.com", "cecelia.ns.cloudflare.com"],
-          A: a.length ? a : ["104.21.32.201", "172.67.182.13"]
-        },
-        nameServers,
-        syncedAt: new Date().toISOString()
+        lookupStatus: recordCount > 0 ? 'records_found' : 'no_records_found',
+        records,
+        timestamp: new Date().toISOString()
       });
-    } catch (error: any) {
-      res.json({
-        domain,
-        records: {
-          CNAME: ["hacyber-global.github.io"],
-          TXT: ["google-site-verification=n7ECyUmQagKB2NSjhm0UWuVnhhvYdxWQH5ez_l2F75w", "v=spf1 include:_spf.mx.cloudflare.net ~all"],
-          NS: ["anirban.ns.cloudflare.com", "cecelia.ns.cloudflare.com"],
-          A: ["104.21.32.201", "172.67.182.13"]
-        },
-        nameServers: [
-          { name: "Google Public DNS", ip: "8.8.8.8", status: "propagated", latency: "14ms" },
-          { name: "Cloudflare DNS", ip: "1.1.1.1", status: "propagated", latency: "7ms" },
-          { name: "OpenDNS", ip: "208.67.222.222", status: "propagated", latency: "19ms" },
-          { name: "Quad9 DNS", ip: "9.9.9.9", status: "propagated", latency: "22ms" }
-        ],
-        syncedAt: new Date().toISOString(),
-        note: "Fallback records for sandbox validation environments."
-      });
+    } catch {
+      return res.status(502).json({ ok: false, domain, error: "DNS lookup could not be completed." });
     }
   });
 
