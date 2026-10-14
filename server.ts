@@ -1639,24 +1639,8 @@ async function startServer() {
   // ==========================================
 
   // In-memory / persistent cache of real driver accounts
-  let realDriversStore: any[] = [
-    {
-      id: 'drv_spark_01',
-      platform: 'Spark',
-      driverName: 'Marcus Vance (Lead)',
-      email: 'm.vance.driver@gmail.com',
-      phone: '+1 (404) 892-1140',
-      platformDriverId: 'SPK-ATL-882910',
-      authMethod: 'device_companion',
-      connectionStatus: 'in_shift',
-      zoneOrMarket: 'Atlanta Metro Hub #4281',
-      todayEarnings: 248.50,
-      todayTrips: 9,
-      pingLatencyMs: 24,
-      lastSyncTimestamp: Date.now(),
-      activeShift: true
-    }
-  ];
+  // No sample driver records are seeded into production.
+  let realDriversStore: any[] = [];
 
   // GET /api/drivers - List all connected driver accounts
   app.get("/api/drivers", (req, res) => {
@@ -1708,6 +1692,48 @@ async function startServer() {
       error: "Authorized account-standing provider integration is not configured. No standing data was verified."
     });
   });
+
+  // Provider connector registry starts empty until an authorized integration is configured.
+  interface ServerConnector {
+    id: string;
+    name: string;
+    providerType: string;
+    protocol: string;
+    endpointUrl: string;
+    authType: string;
+    authTokenMasked: string;
+    rateLimitPerMin: number;
+    currentRequestsPerMin: number;
+    pingMs: number;
+    lastHealthCheck: string;
+    isOnline: boolean;
+    enabled: boolean;
+    consent: {
+      status: 'consented' | 'pending_consent' | 'revoked' | 'expired';
+      consentTimestamp: string;
+      consentedBy: string;
+      authorizedScopes: string[];
+      signatureHash: string;
+      legalNoticeAccepted: boolean;
+      revocationReason?: string;
+    };
+    totalOffersEvaluated: number;
+    totalOffersGrabbed: number;
+    failedRequestsCount: number;
+    lastGrabTimestamp?: string;
+    antiFingerprintHeader: string;
+    environment: 'sandbox_simulation' | 'production_gateway';
+  }
+  let botGrabberMode: 'simulation_safe' | 'production_live' = 'simulation_safe';
+  let circuitBreakerState = {
+    tripped: false,
+    trippedAt: null as string | null,
+    reason: null as string | null,
+    autoTripCount: 0
+  };
+  const botConnectorsStore: ServerConnector[] = [];
+  const botGrabberIncidentsStore: any[] = [];
+  const botGrabberTicketsStore: any[] = [];
 
   app.get('/api/botgrabber/status', (req, res) => {
     const totalConnectors = botConnectorsStore.length;
