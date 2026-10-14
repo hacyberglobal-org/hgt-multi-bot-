@@ -917,7 +917,7 @@ export default function App() {
       const btcAddr = localStorage.getItem('spark_bot_btc_address') || 'bc1qxy2kg3ut7nd673j6vfvjtpx6kwsyudh8t6fsp0';
       const sAmount = localStorage.getItem('spark_bot_payment_amount') || '130.00';
       const payeeName = localStorage.getItem('spark_bot_payee_name') || 'Godfrey N Joshua';
-      const tgToken = localStorage.getItem('spark_bot_billing_token') || '8676025127:AAHDojtnvoghlky30qPrdxdrWMvblTlB8xA';
+      const tgToken = localStorage.getItem('spark_bot_billing_token') || '';
       const tgChatId = localStorage.getItem('spark_bot_billing_chat_id') || '8676025127';
       const tgEnabled = platformsConfig.telegram.enabled;
       const includeBilling = localStorage.getItem('spark_bot_include_billing_in_leads') !== 'false';
