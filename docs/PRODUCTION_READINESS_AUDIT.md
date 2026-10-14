@@ -2,6 +2,15 @@
 
 Date: 2026-10-14
 
+## Hardening changes committed on the security branch
+
+The current branch now removes seeded Argyle verification/consent data, seeded driver and lead records, and the fake dashboard command queue. It removes client-side Telegram token literals, removes stealth/fingerprint-cloaking/MFA-bypass controls, and changes manual driver profiles to an unverified/offline state rather than fabricating credentials, latency, or account standing.
+
+Server routes now fail closed for privileged Cloudflare writes and token rotation, require server-side admin authorization for sensitive Telegram/admin actions, require secrets for Telegram and driver webhooks, and no longer accept provider tokens from request bodies. Simulated offer grabbing and live automation mode are disabled. The account-standing and instant-payout placeholders return unavailable responses instead of fake success. DNS lookup no longer substitutes hardcoded DNS records when lookup fails.
+
+These are source changes on this branch only. **They have not been merged or deployed, and a successful build/test run has not yet been observed.** The in-memory Telegram receipt workflow is not durable production storage; provider integrations and persistence still need implementation and authorized end-to-end verification.
+
+
 ## Current release decision
 
 **NO-GO for production release.** The AppDeploy V8 deployment reports `ready` with an older QA snapshot showing no frontend/network errors, but that is not proof of authorized third-party API connectivity. The current Vercel status check for the security-hardening branch is failing. The AppDeploy V8 secret inventory returned no configured secrets.
