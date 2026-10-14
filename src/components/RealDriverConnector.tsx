@@ -379,7 +379,6 @@ export default function RealDriverConnector({
       tokenExpiry: new Date(Date.now() + 30 * 86400000).toISOString(),
       activeShift: true,
       shiftStartTime: Date.now(),
-      apiSecretToken: 'sec_' + newPlatform.toLowerCase().replace(/\s+/g, '') + '_live_' + Math.random().toString(36).substring(2, 12),
       webhookUrl: `https://${activeDomain}/api/drivers/webhook/${id}`,
       notes: newNotes.trim() || `Configured as CEO verified driver account for ${newPlatform}.`
     };
@@ -1083,40 +1082,8 @@ export default function RealDriverConnector({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
                   
-                  {/* Secret Token */}
-                  <div className="bg-neutral-950 p-3 rounded-xl border border-neutral-800">
-                    <div className="flex items-center justify-between text-neutral-400 mb-1">
-                      <span>SESSION BEARER TOKEN</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setShowSecretMap(prev => ({ ...prev, [selectedDriver.id]: !prev[selectedDriver.id] }))}
-                          className="hover:text-white"
-                        >
-                          {showSecretMap[selectedDriver.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(selectedDriver.apiSecretToken, 'token_' + selectedDriver.id)}
-                          className="hover:text-amber-400"
-                        >
-                          {copiedId === 'token_' + selectedDriver.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                        </button>
-                      </div>
-                    </div>
-                    <p className="font-mono text-neutral-200 truncate">
-                      {showSecretMap[selectedDriver.id] ? selectedDriver.apiSecretToken : '••••••••••••••••••••••••••••••••'}
-                    </p>
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-900 text-[10px]">
-                      <span className="text-neutral-500">Expires in 14 days</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRefreshToken(selectedDriver.id)}
-                        className="text-amber-400 hover:underline cursor-pointer"
-                      >
-                        Rotate Secret
-                      </button>
-                    </div>
+                  <div className="bg-neutral-950 p-3 rounded-xl border border-neutral-800 text-neutral-400 text-xs">
+                    Provider-issued credentials are managed only by the authorized provider and server-side secret manager. This browser does not store or reveal session tokens.
                   </div>
 
                   {/* Webhook Endpoint */}
