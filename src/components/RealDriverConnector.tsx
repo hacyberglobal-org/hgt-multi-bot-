@@ -89,7 +89,6 @@ export default function RealDriverConnector({
   const [testingPingId, setTestingPingId] = useState<string | null>(null);
   const [pingResults, setPingResults] = useState<{ [id: string]: { ms: number; ok: boolean; status: string } }>({});
   const [filterPlatform, setFilterPlatform] = useState<string>('all');
-  const [showSecretMap, setShowSecretMap] = useState<{ [id: string]: boolean }>({});
 
   // Sync & Verify Feature State
   const [isSyncVerifyingId, setIsSyncVerifyingId] = useState<string | null>(null);
@@ -169,12 +168,6 @@ export default function RealDriverConnector({
     }));
     setTestingPingId(null);
     onAddLog('warning', `No live connection was verified for ${driver.platform}. Configure an authorized provider integration before reporting latency or connection status.`, undefined, 'PING_UNVERIFIED');
-  };
-
-  const handleRefreshToken = (driverId: string) => {
-    const target = drivers.find(d => d.id === driverId);
-    if (!target) return;
-    onAddLog('warning', `Token refresh for ${target.platform} is unavailable here. Credentials must be issued and refreshed by the authorized provider integration.`, undefined, 'TOKEN_REFRESH_UNAVAILABLE');
   };
 
   const handleSyncAndVerify = async (driver: RealDriverAccount) => {
@@ -358,29 +351,28 @@ export default function RealDriverConnector({
       id,
       platform: newPlatform,
       driverName: newDriverName.trim(),
-      email: newEmail.trim() || `${newDriverName.toLowerCase().replace(/\s+/g, '.')}@delivery-fleet.net`,
-      phone: newPhone.trim() || '+1 (555) 019-2834',
-      platformDriverId: newPlatformDriverId.trim() || `${newPlatform.toUpperCase().slice(0, 3)}-${Math.floor(100000 + Math.random() * 900000)}`,
+      email: newEmail.trim(),
+      phone: newPhone.trim(),
+      platformDriverId: newPlatformDriverId.trim(),
       authMethod: newAuthMethod,
-      connectionStatus: 'connected',
+      connectionStatus: 'offline',
       zoneOrMarket: newZoneOrMarket.trim() || 'Central Metro Hub',
       vehicle: {
         make: newMake.trim() || 'Toyota',
         model: newModel.trim() || 'Camry',
         year: Number(newYear) || 2022,
-        licensePlate: newPlate.trim() || 'DRV-' + Math.floor(100 + Math.random() * 899),
+        licensePlate: newPlate.trim(),
         isEVOrHybrid: newIsEV,
         cargoCapacityCuFt: 32.0
       },
       todayEarnings: 0,
       todayTrips: 0,
-      pingLatencyMs: 22,
-      lastSyncTimestamp: Date.now(),
-      tokenExpiry: new Date(Date.now() + 30 * 86400000).toISOString(),
-      activeShift: true,
-      shiftStartTime: Date.now(),
-      webhookUrl: `https://${activeDomain}/api/drivers/webhook/${id}`,
-      notes: newNotes.trim() || `Configured as CEO verified driver account for ${newPlatform}.`
+      pingLatencyMs: 0,
+      lastSyncTimestamp: 0,
+      tokenExpiry: '',
+      activeShift: false,
+      webhookUrl: '',
+      notes: newNotes.trim() || 'Manual profile only; provider connection is not verified.'
     };
 
     setDrivers(prev => [newAccount, ...prev]);
@@ -1288,7 +1280,7 @@ export default function RealDriverConnector({
                     <label className="block text-neutral-300 font-bold mb-1">DRIVER FULL NAME *</label>
                     <input
                       type="text"
-                      placeholder="e.g. Marcus Vance"
+                      placeholder="Enter driver name"
                       value={newDriverName}
                       onChange={(e) => setNewDriverName(e.target.value)}
                       required
