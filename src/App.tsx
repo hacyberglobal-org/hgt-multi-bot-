@@ -462,11 +462,7 @@ export default function App() {
     priority: 'HIGH' | 'MEDIUM' | 'LOW';
   }
 
-  const [webexQueue, setWebexQueue] = useState<WebexCommand[]>([
-    { id: 'cycles-001', command: 'TX_LEAD_DISPATCH', target: 't.me/multi_grabber_system_bot', status: 'Executing', progress: 15, timestamp: new Date().toLocaleTimeString().split(' ')[0], priority: 'HIGH' },
-    { id: 'cycles-002', command: 'DB_SYNC_BACKEND', target: 'hacyber-global.github.io/Bot', status: 'Queued', progress: 0, timestamp: new Date().toLocaleTimeString().split(' ')[0], priority: 'MEDIUM' },
-    { id: 'cycles-003', command: 'GEOFENCE_GPS_CALC', target: 'Walmart Hub geofence #4292', status: 'Queued', progress: 0, timestamp: new Date().toLocaleTimeString().split(' ')[0], priority: 'LOW' }
-  ]);
+  const [webexQueue, setWebexQueue] = useState<WebexCommand[]>([]);
   const [isQueueDropdownOpen, setIsQueueDropdownOpen] = useState<boolean>(false);
   const [queueSearchQuery, setQueueSearchQuery] = useState<string>('');
   const [manualInjectionPriority, setManualInjectionPriority] = useState<'HIGH' | 'MEDIUM' | 'LOW'>('HIGH');
