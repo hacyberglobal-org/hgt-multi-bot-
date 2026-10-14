@@ -1,4 +1,5 @@
 import express from "express";
+import { timingSafeEqual } from "crypto";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
@@ -45,6 +46,18 @@ function getAiClient(): GoogleGenAI {
     aiClientInstance = new GoogleGenAI({ apiKey });
   }
   return aiClientInstance;
+}
+
+function requireAdminSecret(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const expected = process.env.SUPPORT_ADMIN_KEY;
+  const supplied = req.header("x-admin-key") || "";
+  if (!expected) return res.status(503).json({ error: "Admin operation unavailable until SUPPORT_ADMIN_KEY is configured server-side." });
+  const expectedBytes = Buffer.from(expected);
+  const suppliedBytes = Buffer.from(supplied);
+  if (expectedBytes.length !== suppliedBytes.length || !timingSafeEqual(expectedBytes, suppliedBytes)) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
 }
 
 async function startServer() {
@@ -176,10 +189,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/cloudflare/kv", async (req, res) => {
-    const accountId = req.body.accountId || process.env.CLOUDFLARE_ACCOUNT_ID;
-    const namespaceId = req.body.namespaceId || process.env.CLOUDFLARE_NAMESPACE_ID;
-    const apiToken = req.body.apiToken || process.env.CLOUDFLARE_API_TOKEN;
+  app.post("/api/cloudflare/kv", requireAdminSecret, async (req, res) => {
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const namespaceId = process.env.CLOUDFLARE_NAMESPACE_ID;
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
     const { keyName, value } = req.body;
     
     if (!accountId || !namespaceId || !apiToken || !keyName || !value) {
@@ -232,32 +245,8 @@ async function startServer() {
   });
 
   // POST /api/cloudflare/token - Update Cloudflare API Token & Token ID
-  app.post("/api/cloudflare/token", (req, res) => {
-    const { token, tokenId } = req.body;
-    if (!token && !tokenId) {
-      return res.status(400).json({ ok: false, error: "Either token or tokenId must be provided" });
-    }
-
-    if (token && typeof token === 'string' && token.trim().length > 0) {
-      process.env.CLOUDFLARE_API_TOKEN = token.trim();
-    }
-    if (tokenId && typeof tokenId === 'string' && tokenId.trim().length > 0) {
-      process.env.CLOUDFLARE_TOKEN_ID = tokenId.trim();
-    }
-
-    const currentToken = process.env.CLOUDFLARE_API_TOKEN || '';
-    const currentTokenId = process.env.CLOUDFLARE_TOKEN_ID || '';
-    const masked = currentToken.length > 14
-      ? `${currentToken.substring(0, 9)}••••••••${currentToken.substring(currentToken.length - 4)}`
-      : '••••••••';
-
-    return res.json({
-      ok: true,
-      message: "Cloudflare token credentials updated successfully.",
-      tokenId: currentTokenId,
-      tokenMasked: masked,
-      status: "ACTIVE_ARMED"
-    });
+  app.post("/api/cloudflare/token", requireAdminSecret, (_req, res) => {
+    return res.status(410).json({ ok: false, error: "Credential rotation must be performed in the deployment secret manager; runtime token mutation is disabled." });
   });
 
   // ==========================================
@@ -277,39 +266,16 @@ async function startServer() {
     accessLink?: string;
   }
 
-  const receiptStore: TelegramReceipt[] = [
-    {
-      id: 'rec_01',
-      userId: '123456789',
-      userName: '@driver_expert_99',
-      chatId: '123456789',
-      caption: 'Paid $130 via PayPal - Ref PAY_ID_8DX94820LK',
-      status: 'pending',
-      receivedAt: new Date(Date.now() - 3600000).toISOString()
-    },
-    {
-      id: 'rec_02',
-      userId: '987654321',
-      userName: '@spark_king_atl',
-      chatId: '987654321',
-      caption: 'Bitcoin payment completed 0.002 BTC',
-      status: 'pending',
-      receivedAt: new Date(Date.now() - 1800000).toISOString()
-    }
-  ];
+  const receiptStore: TelegramReceipt[] = [];
 
-  app.post("/api/telegram/send", async (req, res) => {
-    const { chatId, text, token, reply_markup, parse_mode } = req.body;
-    let botToken = token || process.env.TELEGRAM_BOT_TOKEN;
+  app.post("/api/telegram/send", requireAdminSecret, async (req, res) => {
+    const { chatId, text, reply_markup, parse_mode } = req.body;
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
     // Handle empty strings as well
     if (!botToken || botToken.trim() === "") {
       console.warn("Telegram Send: No token provided");
-      return res.json({ 
-        ok: false, 
-        description: "TELEGRAM_BOT_TOKEN not configured in environment vault. Please configure it in your platform settings.",
-        simulated: true 
-      });
+      return res.status(503).json({ ok: false, description: "TELEGRAM_BOT_TOKEN is not configured server-side." });
     }
 
     try {
@@ -328,11 +294,7 @@ async function startServer() {
     } catch (error) {
       console.error("Telegram Send Error:", error);
       // Fallback for network/DNS issues in restricted environments
-      res.json({ 
-        ok: false, 
-        description: "Network error or connection blocked. In preview, this is common.",
-        simulated: true
-      });
+      res.status(502).json({ ok: false, description: "Telegram request failed; no message delivery is confirmed." });
     }
   });
 
@@ -407,25 +369,28 @@ async function startServer() {
         configured: true,
         botUsername: "multi_grabber_system_bot",
         botLink: botAccessLink,
-        status: "PREVIEW_SIMULATED",
-        description: "Network sandbox prevented direct Telegram probe; using fallback active link."
+        status: "UNVERIFIED",
+        configured: false,
+        description: "Telegram API could not be reached; connection is not verified."
       });
     }
   });
 
   // REST Endpoint: List Receipts
-  app.get("/api/telegram/receipts", (req, res) => {
+  app.get("/api/telegram/receipts", requireAdminSecret, (req, res) => {
     res.json(receiptStore);
   });
 
   // REST Endpoint: Submit Receipt
-  app.post("/api/telegram/receipt", async (req, res) => {
-    const { userId, userName, chatId, caption, photoId } = req.body;
-    const token = req.body.token || process.env.TELEGRAM_BOT_TOKEN;
+  app.post("/api/telegram/receipt", requireAuth, async (req: AuthRequest, res) => {
+    const { userName, chatId, caption, photoId } = req.body;
+    const userId = req.user?.uid;
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!userId || !chatId) return res.status(400).json({ ok: false, error: "Authenticated user and Telegram chat ID are required." });
     const adminChatId = req.body.adminChatId || process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID;
     
-    const targetUserId = String(userId || '123456789');
-    const targetChatId = String(chatId || targetUserId);
+    const targetUserId = String(userId);
+    const targetChatId = String(chatId);
     const targetUserName = userName || `@user_${targetUserId}`;
 
     const newRec: TelegramReceipt = {
@@ -469,9 +434,9 @@ async function startServer() {
   });
 
   // REST Endpoint: Approve Payment (/approve <user_id>)
-  app.post("/api/telegram/approve", async (req, res) => {
+  app.post("/api/telegram/approve", requireAdminSecret, async (req, res) => {
     const { userId, link } = req.body;
-    const token = req.body.token || process.env.TELEGRAM_BOT_TOKEN;
+    const token = process.env.TELEGRAM_BOT_TOKEN;
     const botAccessLink = link || process.env.BOT_ACCESS_LINK || "https://t.me/multi_grabber_system_bot";
 
     if (!userId) {
@@ -501,7 +466,7 @@ async function startServer() {
       telegramResult = await response.json();
     } catch (err) {
       console.warn("Telegram sendMessage error during approve:", err);
-      telegramResult = { ok: true, simulated: true };
+      telegramResult = { ok: false, error: "Telegram delivery failed; approval was not confirmed." };
     }
 
     // 2. Update status in store
@@ -511,6 +476,7 @@ async function startServer() {
       rec.accessLink = botAccessLink;
     }
 
+    if (!telegramResult?.ok) return res.status(502).json({ ok: false, error: "Telegram did not confirm delivery; receipt remains pending.", telegramResult });
     const message = `Approved and link sent to ${targetUserId}.`;
     res.json({ ok: true, message, botAccessLink, telegramResult });
   });
