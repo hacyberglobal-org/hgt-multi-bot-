@@ -49,3 +49,21 @@ test('client code contains no hardcoded Telegram bot-token-like values', async (
   const connector = await files('../src/components/RealDriverConnector.tsx');
   assert.doesNotMatch(app + connector, /['\x60"]\d{8,}:[A-Za-z0-9_-]{20,}['\x60"]/);
 });
+
+
+test('provider and payment endpoints never fabricate a successful connection or payout', async () => {
+  const server = await files('../server.ts');
+  assert.match(server, /Authorized account-standing provider integration is not configured/);
+  assert.match(server, /Instant payouts are disabled until/);
+  assert.doesNotMatch(server, /status:\s*'Completed',[\s\S]{0,250}liveStripe:\s*false/);
+  assert.doesNotMatch(server, /grabbedOffer:\s*simulatedOffer/);
+});
+
+test('server defaults to no seeded driver, lead, or provider records', async () => {
+  const server = await files('../server.ts');
+  const argyle = await files('../src/lib/argyleService.ts');
+  assert.match(server, /let realDriversStore: any\[\] = \[\];/);
+  assert.match(server, /const leadsStore: Array<any> = \[\];/);
+  assert.match(server, /const botConnectorsStore: ServerConnector\[\] = \[\];/);
+  assert.doesNotMatch(argyle, /INITIAL_DEMO_REQUEST_ID/);
+});
