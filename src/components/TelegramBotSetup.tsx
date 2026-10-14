@@ -140,28 +140,7 @@ export default function TelegramBotSetup({
         }
       } catch (e) {}
     }
-    return [
-      {
-        id: 'rec_01',
-        customerHandle: '@driver_expert_99',
-        customerPhone: '+1 (312) 555-0810',
-        method: 'Bitcoin',
-        amountText: '130.00',
-        status: 'pending',
-        timestamp: 'Just now',
-        txHashOrProof: 'TXN_BTC_49204920A382F'
-      },
-      {
-        id: 'rec_02',
-        customerHandle: '@spark_king_atl',
-        customerPhone: '+1 (404) 555-4921',
-        method: 'Zelle',
-        amountText: '130.00',
-        status: 'pending',
-        timestamp: '18 min ago',
-        txHashOrProof: 'ZEL_REF_8DX94820LK'
-      }
-    ];
+    return [];
   });
 
   useEffect(() => {
@@ -632,26 +611,8 @@ export default function TelegramBotSetup({
     } catch(e) {}
   };
 
-  const handleAddDemoReceipt = (method: 'Bitcoin' | 'Zelle') => {
-    const randomNames = ['@chicago_dispatcher', '@delivery_hustler_tx', '@houston_sparky', '@kansas_auto_tap'];
-    const randomPhones = ['+1 (312) 555-1029', '+1 (713) 555-0145', '+1 (281) 555-7301', '+1 (913) 555-3392'];
-    const idx = Math.floor(Math.random() * randomNames.length);
-
-    const newRec: ReceiptRecord = {
-      id: `rec_${Date.now()}`,
-      customerHandle: randomNames[idx],
-      customerPhone: randomPhones[idx],
-      method: method,
-      amountText: parseFloat(paymentAmount).toFixed(2),
-      status: 'pending',
-      timestamp: 'Just now',
-      txHashOrProof: method === 'Bitcoin' 
-        ? `TXN_BTC_${Math.floor(Math.random()*1000000000).toString(16).toUpperCase()}` 
-        : `ZEL_REF_${Math.floor(Math.random()*1000000000).toString(16).toUpperCase()}`
-    };
-
-    setReceiptQueue(prev => [newRec, ...prev]);
-    onAddLog('info', `🎟️ Demo customer ticket created: ${randomNames[idx]} uploaded a pending ${method} proof!`, undefined, 'DEMO_TICKET');
+  const handleAddDemoReceipt = (_method: 'Bitcoin' | 'Zelle') => {
+    onAddLog('info', 'Demo action only: no customer receipt or transaction evidence was created.', undefined, 'DEMO_ONLY');
   };
 
   const getDispatchedLeadsReport = () => {
