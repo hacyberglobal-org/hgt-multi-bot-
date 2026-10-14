@@ -200,7 +200,8 @@ async function startServer() {
     }
 
     try {
-      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${keyName}`, {
+      const safeKeyName = encodeURIComponent(String(keyName));
+      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${safeKeyName}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${apiToken}`,
@@ -481,6 +482,14 @@ async function startServer() {
 
   // Webhook for Telegram Interactive Bot Commands & Receipt Verification
   app.post("/api/telegram/webhook", async (req, res) => {
+    const expectedWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || "";
+    const suppliedWebhookSecret = req.header("x-telegram-bot-api-secret-token") || "";
+    if (!expectedWebhookSecret) return res.status(503).json({ ok: false, error: "Telegram webhook secret is not configured server-side." });
+    const expectedWebhookBytes = Buffer.from(expectedWebhookSecret);
+    const suppliedWebhookBytes = Buffer.from(suppliedWebhookSecret);
+    if (expectedWebhookBytes.length !== suppliedWebhookBytes.length || !timingSafeEqual(expectedWebhookBytes, suppliedWebhookBytes)) {
+      return res.status(401).json({ ok: false, error: "Invalid Telegram webhook signature." });
+    }
     const update = req.body;
     if (update && update.message) {
       const message = update.message;
@@ -495,7 +504,7 @@ async function startServer() {
 
       const token = process.env.TELEGRAM_BOT_TOKEN;
       const adminChatId = process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID;
-      const defaultBotLink = process.env.BOT_ACCESS_LINK || 'https://t.me/multi_grabber_system_bot';
+      const defaultBotLink = process.env.BOT_ACCESS_LINK || '';
 
       const sendTgMsg = async (targetId: string | number, msgText: string, replyMarkup?: any) => {
         if (!token) {
@@ -519,9 +528,9 @@ async function startServer() {
       if (text.startsWith('/approve')) {
         const parts = text.trim().split(/\s+/);
         const targetUserId = parts[1];
-        const botAccessLink = parts[2] || defaultBotLink;
+        const botAccessLink = defaultBotLink;
 
-        if (targetUserId) {
+        if (targetUserId && botAccessLink && adminChatId && String(chatId) === String(adminChatId)) {
           // Send link to client
           await sendTgMsg(
             targetUserId,
