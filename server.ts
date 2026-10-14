@@ -1735,45 +1735,14 @@ async function startServer() {
   const botGrabberIncidentsStore: any[] = [];
   const botGrabberTicketsStore: any[] = [];
 
-  app.get('/api/botgrabber/status', (req, res) => {
-    const totalConnectors = botConnectorsStore.length;
-    const activeOnline = botConnectorsStore.filter(c => c.isOnline && c.enabled).length;
-    const consentedCount = botConnectorsStore.filter(c => c.consent.status === 'consented').length;
-    const pendingConsentCount = botConnectorsStore.filter(c => c.consent.status === 'pending_consent').length;
-    const revokedConsentCount = botConnectorsStore.filter(c => c.consent.status === 'revoked').length;
-
-    // Calculate bot health score (0-100)
-    let healthScore = 100;
-    if (circuitBreakerState.tripped) healthScore -= 50;
-    if (pendingConsentCount > 0) healthScore -= pendingConsentCount * 5;
-    if (revokedConsentCount > 0) healthScore -= revokedConsentCount * 3;
-    const avgPing = Math.round(botConnectorsStore.reduce((acc, c) => acc + c.pingMs, 0) / (totalConnectors || 1));
-    if (avgPing > 50) healthScore -= 10;
-    healthScore = Math.max(10, Math.min(100, healthScore));
-
+  app.get('/api/botgrabber/status', (_req, res) => {
     res.json({
       ok: true,
-      mode: botGrabberMode,
-      circuitBreaker: circuitBreakerState,
-      healthScore,
-      status: circuitBreakerState.tripped 
-        ? 'circuit_tripped' 
-        : botGrabberMode === 'simulation_safe' 
-        ? 'simulation_dry_run' 
-        : 'listening',
-      metrics: {
-        totalConnectors,
-        activeOnline,
-        consentedCount,
-        pendingConsentCount,
-        revokedConsentCount,
-        averagePingMs: avgPing,
-        totalOffersEvaluated: botConnectorsStore.reduce((acc, c) => acc + c.totalOffersEvaluated, 0),
-        totalOffersGrabbed: botConnectorsStore.reduce((acc, c) => acc + c.totalOffersGrabbed, 0),
-        algorithmicJitterMs: 14,
-        antiDetectionStealth: '100% Active'
-      },
-      timestamp: new Date().toISOString()
+      mode: 'manual_only',
+      status: 'UNVERIFIED',
+      automatedAcceptanceEnabled: false,
+      verifiedProviderCount: 0,
+      message: 'Provider connections and telemetry are not verified. Use official provider apps for final decisions.'
     });
   });
 
@@ -1788,83 +1757,20 @@ async function startServer() {
   });
 
   // 3. POST /api/botgrabber/connectors
-  app.post('/api/botgrabber/connectors', (req, res) => {
-    const { name, providerType, protocol, endpointUrl, authType, authToken, rateLimitPerMin, environment } = req.body;
-    if (!name || !providerType || !endpointUrl) {
-      return res.status(400).json({ ok: false, error: 'Missing required connector parameters (name, providerType, endpointUrl)' });
-    }
-
-    const newConnector: ServerConnector = {
-      id: `conn_${providerType.replace('_', '')}_${Date.now().toString().slice(-4)}`,
-      name,
-      providerType,
-      protocol: protocol || 'rest_https',
-      endpointUrl,
-      authType: authType || 'bearer_token',
-      authTokenMasked: authToken ? `${authToken.slice(0, 4)}••••••••${authToken.slice(-4)}` : 'token_••••••••auto',
-      rateLimitPerMin: Number(rateLimitPerMin) || 60,
-      currentRequestsPerMin: 0,
-      pingMs: Math.floor(Math.random() * 25) + 15,
-      lastHealthCheck: new Date().toISOString(),
-      isOnline: true,
-      enabled: true,
-      consent: {
-        status: 'pending_consent',
-        consentTimestamp: new Date().toISOString(),
-        consentedBy: 'Awaiting Operator Signature',
-        authorizedScopes: ['offers:read', 'offers:evaluate', 'offers:accept_simulation_only'],
-        signatureHash: 'sig_pending_auth',
-        legalNoticeAccepted: false
-      },
-      totalOffersEvaluated: 0,
-      totalOffersGrabbed: 0,
-      failedRequestsCount: 0,
-      antiFingerprintHeader: 'CustomAgent/1.0 SecureConnectorLayer',
-      environment: environment === 'production_gateway' ? 'production_gateway' : 'sandbox_simulation'
-    };
-
-    botConnectorsStore.unshift(newConnector);
-    res.json({ ok: true, connector: newConnector });
+  app.post('/api/botgrabber/connectors', requireAdminSecret, (_req, res) => {
+    return res.status(503).json({
+      ok: false,
+      connected: false,
+      error: 'Connector creation is disabled until a real authorized provider adapter and secure secret storage are implemented.'
+    });
   });
 
   // 4. POST /api/botgrabber/consent (Consent-Aware Status Management)
-  app.post('/api/botgrabber/consent', (req, res) => {
-    const { connectorId, action, operatorName, authorizedScopes, revocationReason } = req.body;
-    const connector = botConnectorsStore.find(c => c.id === connectorId);
-    if (!connector) {
-      return res.status(404).json({ ok: false, error: 'Connector not found' });
-    }
-
-    if (action === 'grant') {
-      connector.consent = {
-        status: 'consented',
-        consentTimestamp: new Date().toISOString(),
-        consentedBy: operatorName || 'Verified Operator',
-        authorizedScopes: authorizedScopes && authorizedScopes.length > 0 ? authorizedScopes : ['offers:read', 'offers:evaluate', 'offers:accept_simulation_only'],
-        signatureHash: `sig_sha256_${Math.random().toString(36).substring(2, 12)}`,
-        legalNoticeAccepted: true
-      };
-    } else if (action === 'revoke') {
-      connector.consent = {
-        ...connector.consent,
-        status: 'revoked',
-        authorizedScopes: [],
-        legalNoticeAccepted: false,
-        revocationReason: revocationReason || 'Consent revoked by operator.'
-      };
-    } else if (action === 'reset_pending') {
-      connector.consent = {
-        ...connector.consent,
-        status: 'pending_consent',
-        legalNoticeAccepted: false
-      };
-    }
-
-    res.json({
-      ok: true,
-      connectorId: connector.id,
-      consent: connector.consent,
-      message: `Consent updated to ${connector.consent.status.toUpperCase()}`
+  app.post('/api/botgrabber/consent', requireAdminSecret, (_req, res) => {
+    return res.status(503).json({
+      ok: false,
+      consented: false,
+      error: 'Consent cannot be marked granted by this placeholder endpoint. Use a real consent flow with auditable persistence.'
     });
   });
 
@@ -1913,43 +1819,35 @@ async function startServer() {
   });
 
   // 7. POST /api/botgrabber/mode-toggle (Simulation-Safe vs Live with Guardrails)
-  app.post('/api/botgrabber/mode-toggle', (req, res) => {
-    const { mode, adminConfirmationKey } = req.body;
-    if (mode === 'production_live') {
-      if (adminConfirmationKey !== 'CONFIRM_LIVE_OPS_TOS_SAFE') {
-        return res.status(400).json({
-          ok: false,
-          error: 'MISSING_LIVE_CONFIRMATION',
-          message: 'Production live mode requires affirmative administrative safety confirmation key.'
-        });
-      }
-      botGrabberMode = 'production_live';
-    } else {
-      botGrabberMode = 'simulation_safe';
+  app.post('/api/botgrabber/mode-toggle', requireAdminSecret, (req, res) => {
+    if (req.body?.mode === 'production_live') {
+      return res.status(403).json({
+        ok: false,
+        mode: 'manual_only',
+        error: 'Live automated acceptance is disabled. Use manual opportunity comparison and official provider apps.'
+      });
     }
-
-    res.json({
-      ok: true,
-      mode: botGrabberMode,
-      message: `BotGrabber operating profile set to ${botGrabberMode.toUpperCase()}`
-    });
+    botGrabberMode = 'simulation_safe';
+    return res.json({ ok: true, mode: 'manual_only', automatedAcceptanceEnabled: false });
   });
 
   // 8. GET /api/botgrabber/diagnostics & Incidents
-  app.get('/api/botgrabber/diagnostics', (req, res) => {
+  app.get('/api/botgrabber/diagnostics', (_req, res) => {
     res.json({
       ok: true,
+      verified: false,
       incidents: botGrabberIncidentsStore,
       tickets: botGrabberTicketsStore,
       telemetrySnapshot: {
         timestamp: new Date().toISOString(),
-        systemLoad: '0.14',
-        memoryUsageMb: 88,
-        activeSockets: 6,
-        avgLatencyMs: 27,
-        jitterStdDevMs: 3.2,
+        systemLoad: null,
+        memoryUsageMb: null,
+        activeSockets: null,
+        avgLatencyMs: null,
+        jitterStdDevMs: null,
         circuitBreaker: circuitBreakerState,
-        operatingMode: botGrabberMode
+        operatingMode: 'manual_only',
+        message: 'Live telemetry has not been configured.'
       }
     });
   });
