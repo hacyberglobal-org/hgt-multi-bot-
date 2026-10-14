@@ -75,7 +75,7 @@ export default function TelegramBotSetup({
     if (saved && saved.trim() !== '') {
       return saved;
     }
-    return '8676025127:AAHDojtnvoghlky30qPrdxdrWMvblTlB8xA';
+    return '';
   });
   const [billingChatId, setBillingChatId] = useState(() => {
     const saved = localStorage.getItem('spark_bot_billing_chat_id');
@@ -87,10 +87,10 @@ export default function TelegramBotSetup({
 
   // Bitcoin Account & Zelle Routing Configuration states
   const [bitcoinAddress, setBitcoinAddress] = useState(() => {
-    return localStorage.getItem('spark_bot_btc_address') || 'bc1qxy2kg3ut7nd673j6vfvjtpx6kwsyudh8t6fsp0';
+    return localStorage.getItem('spark_bot_btc_address') || '';
   });
   const [zelleRoutingAddress, setZelleRoutingAddress] = useState(() => {
-    return localStorage.getItem('spark_bot_zelle_address') || 'zelle@hacyberglobal.dpdns.org';
+    return localStorage.getItem('spark_bot_zelle_address') || '';
   });
 
   // Sales and Usage Rules delivered automatically to customers
@@ -405,11 +405,10 @@ export default function TelegramBotSetup({
         setTgConnectionStatus('ACTIVE');
         setTestLogs(prev => [
           ...prev,
-          `⚠️ CORS / NETWORK PREVIEW INGRESS RESTRICTION DETECTED.`,
-          `⚡ Swapping to Local Sandbox Pipeline (Simulated Handshake Success)...`,
-          `✅ MOCK INTERNET ACCESS ACCEPTED: Telegram payload simulated on subscriber ${chatId}!`
+          `⚠️ Live Telegram verification could not be completed from this browser session.`,
+          `No message was sent. Configure the bot token on the server and verify the connection from the backend.`
         ]);
-        onAddLog('info', `✅ TELEGRAM STANDBY (SANDBOX): Integration confirmed. Virtual message piped to receiver ID: ${chatId}.`, undefined, 'TG_PROBE_SIM');
+        onAddLog('warning', `Telegram connection is unverified; no test message was sent.`, undefined, 'TG_PROBE_UNVERIFIED');
       }, 1200);
     }
   };
