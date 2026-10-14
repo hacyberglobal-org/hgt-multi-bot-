@@ -1669,55 +1669,22 @@ async function startServer() {
   });
 
   // POST /api/drivers/connect - Register or pair new driver account
-  app.post("/api/drivers/connect", (req, res) => {
-    const { platform, driverName, email, phone, platformDriverId, authMethod, zoneOrMarket, vehicle, notes } = req.body;
-
-    if (!driverName || !platform) {
-      return res.status(400).json({ ok: false, error: "driverName and platform are required." });
-    }
-
-    const newId = `drv_${platform.toLowerCase().replace(/[^a-z0-9]/g, '')}_${Date.now()}`;
-    const newDriver = {
-      id: newId,
-      platform,
-      driverName,
-      email: email || `${driverName.toLowerCase().replace(/\s+/g, '.')}@delivery-fleet.net`,
-      phone: phone || '+1 (555) 019-2834',
-      platformDriverId: platformDriverId || `${platform.toUpperCase().slice(0, 3)}-${Math.floor(100000 + Math.random() * 900000)}`,
-      authMethod: authMethod || 'oauth_direct',
-      connectionStatus: 'connected',
-      zoneOrMarket: zoneOrMarket || 'Central Metro Hub',
-      vehicle: vehicle || { make: 'Toyota', model: 'RAV4', year: 2023, licensePlate: 'DRV-901' },
-      todayEarnings: 0,
-      todayTrips: 0,
-      pingLatencyMs: Math.floor(Math.random() * 20) + 15,
-      lastSyncTimestamp: Date.now(),
-      activeShift: false,
-      apiSecretToken: `sec_${platform.toLowerCase().replace(/[^a-z0-9]/g, '')}_live_${Math.random().toString(36).substring(2, 14)}`,
-      webhookUrl: `/api/drivers/webhook/${newId}`,
-      notes: notes || 'Connected via CEO Portal'
-    };
-
-    realDriversStore.unshift(newDriver);
-    res.json({ ok: true, message: "Driver account paired successfully.", driver: newDriver });
-  });
-
-  // POST /api/drivers/test-ping - Live ping handshake check
-  app.post("/api/drivers/test-ping", (req, res) => {
-    const { driverId, platform } = req.body;
-    const latency = Math.floor(Math.random() * 25) + 12;
-    res.json({
-      ok: true,
-      driverId,
-      platform: platform || 'Spark',
-      pingMs: latency,
-      protocol: "TLS 1.3 / AES-256-GCM",
-      gatewayStatus: "HTTP 200 OK",
-      timestamp: new Date().toISOString()
+  app.post("/api/drivers/connect", requireAuth, (_req, res) => {
+    return res.status(503).json({
+      ok: false,
+      connected: false,
+      error: "Driver profile entry is not a provider connection. Configure an authorized provider integration before reporting a connected account."
     });
   });
 
-  // POST /api/drivers/webhook/:driverId - Real-time inbound webhook receiver for driver app events
+  app.post("/api/drivers/test-ping", requireAuth, (_req, res) => {
+    return res.status(503).json({
+      ok: false,
+      verified: false,
+      error: "No authorized provider health-check endpoint is configured; latency was not measured."
+    });
+  });
+
   app.post("/api/drivers/webhook/:driverId", (req, res) => {
     const { driverId } = req.params;
     const payload = req.body;
@@ -1876,70 +1843,14 @@ async function startServer() {
   });
 
   // 5. POST /api/botgrabber/simulate-offer (Simulation-Safe Execution Engine)
-  app.post('/api/botgrabber/simulate-offer', (req, res) => {
-    if (circuitBreakerState.tripped) {
-      return res.status(423).json({
-        ok: false,
-        error: 'CIRCUIT_BREAKER_TRIPPED',
-        message: `BotGrabber circuit breaker is engaged: "${circuitBreakerState.reason}". Safety lockout active.`
-      });
-    }
-
-    const { provider, payout, miles, storeName, customLatencyMs } = req.body;
-    const targetConnector = botConnectorsStore.find(c => c.providerType === provider || c.id === provider);
-
-    // Consent gate check
-    if (targetConnector && targetConnector.consent.status !== 'consented') {
-      return res.status(403).json({
-        ok: false,
-        error: 'CONSENT_POLICY_BLOCKED',
-        message: `Connector ${targetConnector.name} cannot evaluate or grab offers because its consent status is ${targetConnector.consent.status.toUpperCase()}. Operator affirmation is required.`,
-        consentStatus: targetConnector.consent.status
-      });
-    }
-
-    // Algorithmic evaluation with jitter (38ms - 95ms)
-    const baseLatency = customLatencyMs || Math.floor(Math.random() * 45) + 38;
-    const jitter = Math.floor(Math.random() * 14) - 7;
-    const grabSpeedMs = Math.max(18, baseLatency + jitter);
-
-    const simulatedOffer = {
-      id: `sim_off_${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      provider: targetConnector ? targetConnector.providerType : (provider || 'walmart_spark'),
-      providerLabel: targetConnector ? targetConnector.name : 'Walmart Spark Gateway',
-      payout: Number(payout) || (Math.floor(Math.random() * 28) + 24.50),
-      estimatedMiles: Number(miles) || (Math.floor(Math.random() * 6) + 2.4),
-      itemsCount: Math.floor(Math.random() * 40) + 12,
-      storeName: storeName || 'Walmart Supercenter #2201 (Curbside Bay 7)',
-      dropoffAddress: '742 Evergreen Terrace (Residential)',
-      expiresInSeconds: 45,
-      grabLatencyMs: grabSpeedMs,
-      timestamp: Date.now(),
-      status: 'grabbed_safe',
-      environment: 'simulation_safe_sandbox',
-      fingerprintAudit: {
-        tlsHandshakeMs: 8,
-        antiDetectionJitterAppliedMs: jitter,
-        sha256PayloadHash: `payload_${Math.random().toString(36).substring(2, 10)}`
-      }
-    };
-
-    if (targetConnector) {
-      targetConnector.totalOffersEvaluated += 1;
-      targetConnector.totalOffersGrabbed += 1;
-      targetConnector.lastGrabTimestamp = new Date().toISOString();
-    }
-
-    res.json({
-      ok: true,
-      mode: botGrabberMode,
-      safeSimulation: true,
-      grabbedOffer: simulatedOffer,
-      message: `Offer grabbed in ${grabSpeedMs}ms via Simulation-Safe sandbox. Zero deactivation risk.`
+  app.post('/api/botgrabber/simulate-offer', requireAuth, (_req, res) => {
+    return res.status(410).json({
+      ok: false,
+      accepted: false,
+      error: "Automated offer grabbing is disabled. Use manual opportunity comparison and open the official provider app to make decisions."
     });
   });
 
-  // 6. POST /api/botgrabber/circuit-breaker (Safety Tripping & Disarming)
   app.post('/api/botgrabber/circuit-breaker', (req, res) => {
     const { action, reason } = req.body;
     if (action === 'trip') {
