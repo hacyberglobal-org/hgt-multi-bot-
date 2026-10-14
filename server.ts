@@ -93,7 +93,7 @@ async function startServer() {
       integrations: {
         cloudflare: {
           configured: hasCloudflare,
-          tokenId: process.env.CLOUDFLARE_TOKEN_ID || "2966e15e0df3b4d3a747d6e0efb7802c",
+          tokenId: process.env.CLOUDFLARE_TOKEN_ID || "",
           edgeDomain: "orders.hacyberglobal.dgdns.org"
         },
         telegram: {
@@ -206,7 +206,7 @@ async function startServer() {
   // GET /api/cloudflare/status - Cloudflare API Token & Edge status
   app.get("/api/cloudflare/status", (req, res) => {
     const rawToken = process.env.CLOUDFLARE_API_TOKEN || '';
-    const tokenId = process.env.CLOUDFLARE_TOKEN_ID || '2966e15e0df3b4d3a747d6e0efb7802c';
+    const tokenId = process.env.CLOUDFLARE_TOKEN_ID || "";
     const isConfigured = Boolean(rawToken && rawToken.length > 0);
     const masked = rawToken.length > 14
       ? `${rawToken.substring(0, 9)}••••••••${rawToken.substring(rawToken.length - 4)}`
