@@ -221,11 +221,7 @@ async function startServer() {
     const rawToken = process.env.CLOUDFLARE_API_TOKEN || '';
     const tokenId = process.env.CLOUDFLARE_TOKEN_ID || "";
     const isConfigured = Boolean(rawToken && rawToken.length > 0);
-    const masked = rawToken.length > 14
-      ? `${rawToken.substring(0, 9)}••••••••${rawToken.substring(rawToken.length - 4)}`
-      : '••••••••';
-
-    res.json({
+        res.json({
       ok: true,
       connected: false,
       configured: isConfigured,
@@ -298,8 +294,8 @@ async function startServer() {
   });
 
   app.post("/api/telegram/verify", async (req, res) => {
-    const { token, chatId } = req.body;
-    const botToken = token || process.env.TELEGRAM_BOT_TOKEN;
+    const { chatId } = req.body;
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
     if (!botToken) {
       return res.status(400).json({ error: "TELEGRAM_BOT_TOKEN not configured" });
@@ -315,7 +311,7 @@ async function startServer() {
       res.json(data);
     } catch (error) {
       console.error("Telegram Verify Error:", error);
-      res.json({ ok: false, error: "Network error", simulated: true });
+      res.status(502).json({ ok: false, error: "Telegram verification failed; connection is not verified." });
     }
   });
 
@@ -323,16 +319,16 @@ async function startServer() {
   app.get("/api/telegram/bot-info", async (req, res) => {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const adminChatId = process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID;
-    const botAccessLink = process.env.BOT_ACCESS_LINK || "https://t.me/multi_grabber_system_bot";
+    const botAccessLink = process.env.BOT_ACCESS_LINK || "";
 
     if (!token || token.trim() === '') {
       return res.json({
         ok: true,
         configured: false,
-        botUsername: "multi_grabber_system_bot",
-        botLink: botAccessLink,
+        botUsername: null,
+        botLink: null,
         status: "STANDBY_UNCONFIGURED",
-        message: "TELEGRAM_BOT_TOKEN not configured in environment vault. Defaulting to system grabber link."
+        message: "TELEGRAM_BOT_TOKEN and BOT_ACCESS_LINK must be configured server-side."
       });
     }
 
@@ -356,20 +352,19 @@ async function startServer() {
         return res.json({
           ok: true,
           configured: false,
-          botUsername: "multi_grabber_system_bot",
-          botLink: botAccessLink,
+          botUsername: null,
+          botLink: null,
           status: "INVALID_TOKEN",
           description: data.description || "Could not verify bot token"
         });
       }
     } catch (e: any) {
       return res.json({
-        ok: true,
-        configured: true,
-        botUsername: "multi_grabber_system_bot",
-        botLink: botAccessLink,
-        status: "UNVERIFIED",
+        ok: false,
         configured: false,
+        botUsername: null,
+        botLink: null,
+        status: "UNVERIFIED",
         description: "Telegram API could not be reached; connection is not verified."
       });
     }
@@ -386,7 +381,8 @@ async function startServer() {
     const userId = req.user?.uid;
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!userId || !chatId) return res.status(400).json({ ok: false, error: "Authenticated user and Telegram chat ID are required." });
-    const adminChatId = req.body.adminChatId || process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID;
+    const adminChatId = process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID;
+    if (!token || !adminChatId) return res.status(503).json({ ok: false, error: "Telegram bot and admin chat must be configured server-side." });
     
     const targetUserId = String(userId);
     const targetChatId = String(chatId);
@@ -471,14 +467,14 @@ async function startServer() {
       telegramResult = { ok: false, error: "Telegram delivery failed; approval was not confirmed." };
     }
 
-    // 2. Update status in store
+    if (!telegramResult?.ok) return res.status(502).json({ ok: false, error: "Telegram did not confirm delivery; receipt remains pending.", telegramResult });
+
+    // 2. Update status only after Telegram confirms the send.
     const rec = receiptStore.find(r => r.userId === targetUserId && r.status === 'pending');
     if (rec) {
       rec.status = 'approved';
       rec.accessLink = botAccessLink;
     }
-
-    if (!telegramResult?.ok) return res.status(502).json({ ok: false, error: "Telegram did not confirm delivery; receipt remains pending.", telegramResult });
     const message = `Approved and link sent to ${targetUserId}.`;
     res.json({ ok: true, message, botAccessLink, telegramResult });
   });
