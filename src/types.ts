@@ -91,16 +91,6 @@ export interface VehicleDetails {
   isEVOrHybrid?: boolean;
 }
 
-export interface AntiDetectionArmor {
-  jitterEnabled: boolean;
-  minDelayMs: number;
-  maxDelayMs: number;
-  geofenceLock: boolean;
-  maxDailyAccepts: number;
-  stealthUserAgent: string;
-  autoMfaBypassAlert: boolean;
-  sslFingerprintCloak: boolean;
-}
 
 export interface DriverViolationOrAlert {
   id: string;
@@ -144,9 +134,7 @@ export interface RealDriverAccount {
   tokenExpiry: string;
   activeShift: boolean;
   shiftStartTime?: number;
-  apiSecretToken: string;
   webhookUrl: string;
-  antiDetection: AntiDetectionArmor;
   notes?: string;
   standing?: DriverAccountStanding;
 }
@@ -197,9 +185,8 @@ export type ConsentScope =
   | 'offers:read' 
   | 'offers:evaluate' 
   | 'offers:accept_simulation_only' 
-  | 'offers:accept_live' 
   | 'telemetry:export' 
-  | 'anti_detection:stealth_apply';
+;
 
 export interface ConnectorConsentRecord {
   status: ConsentStatus;

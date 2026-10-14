@@ -462,11 +462,7 @@ export default function App() {
     priority: 'HIGH' | 'MEDIUM' | 'LOW';
   }
 
-  const [webexQueue, setWebexQueue] = useState<WebexCommand[]>([
-    { id: 'cycles-001', command: 'TX_LEAD_DISPATCH', target: 't.me/multi_grabber_system_bot', status: 'Executing', progress: 15, timestamp: new Date().toLocaleTimeString().split(' ')[0], priority: 'HIGH' },
-    { id: 'cycles-002', command: 'DB_SYNC_BACKEND', target: 'hacyber-global.github.io/Bot', status: 'Queued', progress: 0, timestamp: new Date().toLocaleTimeString().split(' ')[0], priority: 'MEDIUM' },
-    { id: 'cycles-003', command: 'GEOFENCE_GPS_CALC', target: 'Walmart Hub geofence #4292', status: 'Queued', progress: 0, timestamp: new Date().toLocaleTimeString().split(' ')[0], priority: 'LOW' }
-  ]);
+  const [webexQueue, setWebexQueue] = useState<WebexCommand[]>([]);
   const [isQueueDropdownOpen, setIsQueueDropdownOpen] = useState<boolean>(false);
   const [queueSearchQuery, setQueueSearchQuery] = useState<string>('');
   const [manualInjectionPriority, setManualInjectionPriority] = useState<'HIGH' | 'MEDIUM' | 'LOW'>('HIGH');
@@ -917,7 +913,7 @@ export default function App() {
       const btcAddr = localStorage.getItem('spark_bot_btc_address') || 'bc1qxy2kg3ut7nd673j6vfvjtpx6kwsyudh8t6fsp0';
       const sAmount = localStorage.getItem('spark_bot_payment_amount') || '130.00';
       const payeeName = localStorage.getItem('spark_bot_payee_name') || 'Godfrey N Joshua';
-      const tgToken = localStorage.getItem('spark_bot_billing_token') || '8676025127:AAHDojtnvoghlky30qPrdxdrWMvblTlB8xA';
+      const tgToken = localStorage.getItem('spark_bot_billing_token') || '';
       const tgChatId = localStorage.getItem('spark_bot_billing_chat_id') || '8676025127';
       const tgEnabled = platformsConfig.telegram.enabled;
       const includeBilling = localStorage.getItem('spark_bot_include_billing_in_leads') !== 'false';
@@ -1943,7 +1939,7 @@ export default function App() {
         webexDropCount,
         webexErrors,
         webexStatusHistory,
-        telegramToken: localStorage.getItem('spark_bot_tg_token') || '8737167779:AAE2WWVpZcQP-wJvilmvXFi-EP1C7zpe0WE',
+        telegramToken: localStorage.getItem('spark_bot_tg_token') || '',
         telegramChatId: localStorage.getItem('spark_bot_tg_chat_id') || '1056428327'
       });
       toast.success('Connection Audit Report downloaded successfully!');

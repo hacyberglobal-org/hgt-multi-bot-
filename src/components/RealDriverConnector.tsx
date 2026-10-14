@@ -65,216 +65,7 @@ interface RealDriverConnectorProps {
   onInjectOffer?: (offer: SparkOffer) => void;
 }
 
-const DEFAULT_DRIVERS: RealDriverAccount[] = [
-  {
-    id: 'drv_spark_01',
-    platform: 'Spark',
-    driverName: 'Marcus Vance (Lead)',
-    email: 'm.vance.driver@gmail.com',
-    phone: '+1 (404) 892-1140',
-    platformDriverId: 'SPK-ATL-882910',
-    authMethod: 'device_companion',
-    connectionStatus: 'in_shift',
-    zoneOrMarket: 'Atlanta Metro Hub #4281',
-    vehicle: {
-      make: 'Toyota',
-      model: 'RAV4 Hybrid',
-      year: 2023,
-      color: 'Silver',
-      licensePlate: 'GA-8XYZ92',
-      cargoCapacityCuFt: 37.6,
-      isEVOrHybrid: true
-    },
-    todayEarnings: 248.50,
-    todayTrips: 9,
-    pingLatencyMs: 24,
-    lastSyncTimestamp: Date.now() - 45000,
-    tokenExpiry: '2026-09-14T12:00:00Z',
-    activeShift: true,
-    shiftStartTime: Date.now() - 18000000,
-    apiSecretToken: 'sec_spk_live_920f83ba91c0e8',
-    webhookUrl: 'https://api.hacyber-spark.internal/webhook/drv_spark_01',
-    antiDetection: {
-      jitterEnabled: true,
-      minDelayMs: 450,
-      maxDelayMs: 1400,
-      geofenceLock: true,
-      maxDailyAccepts: 22,
-      stealthUserAgent: 'SparkDriver/4.38.2 (iPhone15,3; iOS 18.2; Scale/3.00)',
-      autoMfaBypassAlert: true,
-      sslFingerprintCloak: true
-    },
-    notes: 'Main priority runner for Walmart Supercenter #4281 Shop & Deliver.',
-    standing: {
-      status: 'excellent',
-      healthScore: 98,
-      customerRating: 4.97,
-      completionRatePercent: 100,
-      onTimeArrivalPercent: 98,
-      acceptanceRatePercent: 78,
-      deactivationRiskPercent: 1.2,
-      lastVerifiedAt: '2026-09-11T13:45:00Z',
-      platformStandingSummary: 'Account in top 2% tier across Walmart DDI Southeast Zone. Zero contract violations.',
-      pendingViolations: [
-        {
-          id: 'alt_spk_01',
-          type: 'document_expiry',
-          title: 'Vehicle Insurance Renewal Notice',
-          severity: 'info',
-          date: '2026-09-01',
-          details: 'Commercial/Personal insurance policy renewal document due in 24 days. Upload renewal card before deadline.',
-          resolved: false,
-          canAppeal: false
-        },
-        {
-          id: 'alt_spk_02',
-          type: 'mfa_checkpoint',
-          title: 'Routine Facial Verification Checkpoint Passed',
-          severity: 'low',
-          date: '2026-09-08',
-          details: 'Real-time selfie biometrics verified successfully with DDI registered profile (99.4% match).',
-          resolved: true,
-          canAppeal: false
-        }
-      ]
-    }
-  },
-  {
-    id: 'drv_dd_02',
-    platform: 'DoorDash',
-    driverName: 'Elena Rostova',
-    email: 'elena.dash.pro@icloud.com',
-    phone: '+1 (214) 739-9021',
-    platformDriverId: 'DASHER-TX-440192',
-    authMethod: 'oauth_direct',
-    connectionStatus: 'connected',
-    zoneOrMarket: 'Dallas Uptown / NorthPark',
-    vehicle: {
-      make: 'Honda',
-      model: 'Civic Hatchback',
-      year: 2022,
-      color: 'Sonic Gray',
-      licensePlate: 'TX-DSH771',
-      cargoCapacityCuFt: 25.7,
-      isEVOrHybrid: false
-    },
-    todayEarnings: 182.20,
-    todayTrips: 11,
-    pingLatencyMs: 38,
-    lastSyncTimestamp: Date.now() - 120000,
-    tokenExpiry: '2026-09-20T00:00:00Z',
-    activeShift: false,
-    apiSecretToken: 'sec_dd_live_7719ab23cf44',
-    webhookUrl: 'https://api.hacyber-spark.internal/webhook/drv_dd_02',
-    antiDetection: {
-      jitterEnabled: true,
-      minDelayMs: 600,
-      maxDelayMs: 1800,
-      geofenceLock: false,
-      maxDailyAccepts: 25,
-      stealthUserAgent: 'DoorDashDasher/2.298.0 (Android 14; SM-S928B)',
-      autoMfaBypassAlert: true,
-      sslFingerprintCloak: true
-    },
-    notes: 'High acceptance rating runner. Connected via DoorDash Partner OAuth.',
-    standing: {
-      status: 'good',
-      healthScore: 89,
-      customerRating: 4.88,
-      completionRatePercent: 96,
-      onTimeArrivalPercent: 92,
-      acceptanceRatePercent: 72,
-      deactivationRiskPercent: 6.4,
-      lastVerifiedAt: '2026-09-10T19:30:00Z',
-      platformStandingSummary: 'Active Dasher in good standing. 1 pending contract violation notice currently in appeal review.',
-      pendingViolations: [
-        {
-          id: 'cv_dd_101',
-          type: 'late_arrival',
-          title: 'Late Arrival Contract Violation (Order #DD-8819)',
-          severity: 'medium',
-          date: '2026-09-04',
-          details: 'Arrived at merchant pickup 14 minutes past delivery estimate. Merchant wait time dispute submitted.',
-          resolved: false,
-          canAppeal: true
-        },
-        {
-          id: 'cv_dd_102',
-          type: 'customer_report',
-          title: 'Order Not Delivered Dispute (Cleared)',
-          severity: 'low',
-          date: '2026-08-19',
-          details: 'Customer disputed drop-off. Geofence timestamp & delivery photo verified drop at correct door. Cleared.',
-          resolved: true,
-          canAppeal: false
-        }
-      ]
-    }
-  },
-  {
-    id: 'drv_flex_03',
-    platform: 'Amazon Flex',
-    driverName: 'Devon Bradley',
-    email: 'devon.flex.express@gmail.com',
-    phone: '+1 (312) 551-8409',
-    platformDriverId: 'AMZN-VIL1-99824',
-    authMethod: 'aggregator_argyle',
-    connectionStatus: 'connected',
-    zoneOrMarket: 'Chicago Central (Station DIL3 / VIL1)',
-    vehicle: {
-      make: 'Ford',
-      model: 'Transit Connect',
-      year: 2021,
-      color: 'White',
-      licensePlate: 'IL-FLX300',
-      cargoCapacityCuFt: 127.4,
-      isEVOrHybrid: false
-    },
-    todayEarnings: 310.00,
-    todayTrips: 3,
-    pingLatencyMs: 29,
-    lastSyncTimestamp: Date.now() - 300000,
-    tokenExpiry: '2026-09-30T23:59:59Z',
-    activeShift: true,
-    shiftStartTime: Date.now() - 14400000,
-    apiSecretToken: 'sec_amzn_live_cc829103af',
-    webhookUrl: 'https://api.hacyber-spark.internal/webhook/drv_flex_03',
-    antiDetection: {
-      jitterEnabled: true,
-      minDelayMs: 800,
-      maxDelayMs: 2100,
-      geofenceLock: true,
-      maxDailyAccepts: 4,
-      stealthUserAgent: 'AmazonFlex/3.99.1 (Pixel 8 Pro; Android 15)',
-      autoMfaBypassAlert: true,
-      sslFingerprintCloak: true
-    },
-    notes: 'Large cargo van certified. Specializes in 4-hr & 5-hr surge logistics blocks.',
-    standing: {
-      status: 'excellent',
-      healthScore: 96,
-      customerRating: 4.95,
-      completionRatePercent: 99,
-      onTimeArrivalPercent: 98,
-      acceptanceRatePercent: 94,
-      deactivationRiskPercent: 2.1,
-      lastVerifiedAt: '2026-09-11T11:15:00Z',
-      platformStandingSummary: 'Amazon Flex Fantastic Standing rating maintained. Tier 4 reservation rewards unlocked.',
-      pendingViolations: [
-        {
-          id: 'alt_flex_01',
-          type: 'policy_notice',
-          title: 'Delivery Quality Standard Acknowledged',
-          severity: 'info',
-          date: '2026-09-05',
-          details: '100% on-time delivery metric achieved for scheduled blocks during Chicago severe rain alert.',
-          resolved: true,
-          canAppeal: false
-        }
-      ]
-    }
-  }
-];
+const DEFAULT_DRIVERS: RealDriverAccount[] = [];
 
 export default function RealDriverConnector({
   activeDomain,
@@ -298,7 +89,6 @@ export default function RealDriverConnector({
   const [testingPingId, setTestingPingId] = useState<string | null>(null);
   const [pingResults, setPingResults] = useState<{ [id: string]: { ms: number; ok: boolean; status: string } }>({});
   const [filterPlatform, setFilterPlatform] = useState<string>('all');
-  const [showSecretMap, setShowSecretMap] = useState<{ [id: string]: boolean }>({});
 
   // Sync & Verify Feature State
   const [isSyncVerifyingId, setIsSyncVerifyingId] = useState<string | null>(null);
@@ -372,118 +162,40 @@ export default function RealDriverConnector({
 
   const handleTestPing = (driver: RealDriverAccount) => {
     setTestingPingId(driver.id);
-    onAddLog('info', `📡 Testing real-time API handshake with ${driver.platform} gateway for ${driver.driverName}...`, undefined, 'PING_TEST');
-
-    // Simulate real gateway query with slight variance
-    setTimeout(() => {
-      const pingMs = Math.floor(Math.random() * 22) + 14;
-      setPingResults(prev => ({
-        ...prev,
-        [driver.id]: {
-          ms: pingMs,
-          ok: true,
-          status: 'HTTP 200 OK (TLS 1.3 / AES-256 Validated)'
-        }
-      }));
-
-      setDrivers(prev => prev.map(d => d.id === driver.id ? {
-        ...d,
-        pingLatencyMs: pingMs,
-        lastSyncTimestamp: Date.now(),
-        connectionStatus: d.activeShift ? 'in_shift' : 'connected'
-      } : d));
-
-      setTestingPingId(null);
-      onAddLog('info', `✅ Connection verified for ${driver.driverName}: ${pingMs}ms latency. Gateway token authenticated.`, undefined, 'PING_SUCCESS');
-    }, 1100);
-  };
-
-  const handleRefreshToken = (driverId: string) => {
-    const target = drivers.find(d => d.id === driverId);
-    if (!target) return;
-
-    onAddLog('info', `🔄 Refreshing OAuth 2.0 bearer token & session key for ${target.driverName} on ${target.platform}...`, undefined, 'TOKEN_REFRESH');
-    setTimeout(() => {
-      const newSecret = 'sec_' + target.platform.toLowerCase().replace(/\s+/g, '') + '_live_' + Math.random().toString(36).substring(2, 14);
-      setDrivers(prev => prev.map(d => d.id === driverId ? {
-        ...d,
-        apiSecretToken: newSecret,
-        lastSyncTimestamp: Date.now(),
-        connectionStatus: d.activeShift ? 'in_shift' : 'connected'
-      } : d));
-      onAddLog('info', `✅ Token refreshed for ${target.driverName}. New expiration set to 14 days.`, undefined, 'TOKEN_OK');
-    }, 900);
+    setPingResults(prev => ({
+      ...prev,
+      [driver.id]: { ms: 0, ok: false, status: 'Not verified: authorized provider endpoint is unavailable' }
+    }));
+    setTestingPingId(null);
+    onAddLog('warning', `No live connection was verified for ${driver.platform}. Configure an authorized provider integration before reporting latency or connection status.`, undefined, 'PING_UNVERIFIED');
   };
 
   const handleSyncAndVerify = async (driver: RealDriverAccount) => {
     setIsSyncVerifyingId(driver.id);
-    setSyncVerifyStage(`1/3: Negotiating TLS handshake with ${driver.platform} Trust & Safety API Gateway...`);
-    onAddLog('info', `🛡️ Initiating Sync & Verify for ${driver.driverName} on ${driver.platform} gateway...`, undefined, 'SYNC_VERIFY');
-
-    setTimeout(() => {
-      setSyncVerifyStage(`2/3: Querying platform compliance database for policy violations & pending alerts...`);
-    }, 600);
-
-    setTimeout(async () => {
-      try {
-        setSyncVerifyStage(`3/3: Parsing delivery performance metrics, ratings & deactivation risk matrix...`);
-        const response = await fetch('/api/drivers/sync-verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            driverId: driver.id,
-            platform: driver.platform,
-            driverName: driver.driverName
-          })
-        });
-
-        let standingData: DriverAccountStanding;
-
-        if (response.ok) {
-          const json = await response.json();
-          standingData = json.standing;
-        } else {
-          // Safe fallback from local state or standard compliant structure
-          standingData = driver.standing || {
-            status: 'excellent',
-            healthScore: 98,
-            customerRating: 4.96,
-            completionRatePercent: 99,
-            onTimeArrivalPercent: 97,
-            acceptanceRatePercent: 86,
-            deactivationRiskPercent: 1.8,
-            lastVerifiedAt: new Date().toISOString(),
-            pendingViolations: [],
-            platformStandingSummary: `Direct verified standing with ${driver.platform}. Account is active and in good standing.`
-          };
-        }
-
-        setDrivers(prev => prev.map(d => d.id === driver.id ? {
-          ...d,
-          standing: standingData,
-          lastSyncTimestamp: Date.now()
-        } : d));
-
-        setVerifiedStandingModal({
-          driver,
-          standing: standingData
-        });
-
-        const pendingCount = standingData.pendingViolations.filter(v => !v.resolved).length;
-        onAddLog(
-          pendingCount > 0 ? 'warning' : 'info',
-          `🛡️ [SYNC & VERIFY COMPLETED] ${driver.driverName} (${driver.platform}): Standing is ${standingData.status.toUpperCase()} (${standingData.healthScore}/100 Score). ${pendingCount} active alerts/violations reported.`,
-          undefined,
-          pendingCount > 0 ? 'STANDING_ALERT' : 'STANDING_EXCELLENT'
-        );
-      } catch (e) {
-        console.error('Sync & Verify request failed', e);
-        onAddLog('warning', `⚠️ Sync & Verify network timeout for ${driver.driverName}. Loaded local cache.`, undefined, 'SYNC_FAIL');
-      } finally {
-        setIsSyncVerifyingId(null);
-        setSyncVerifyStage('');
-      }
-    }, 1300);
+    setSyncVerifyStage('Checking authorized provider verification endpoint...');
+    try {
+      const response = await fetch('/api/drivers/sync-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId: driver.id, platform: driver.platform })
+      });
+      if (!response.ok) throw new Error('Provider verification is unavailable or not authorized.');
+      const json = await response.json();
+      if (!json?.verified || !json?.standing) throw new Error('Provider did not return verified account-standing data.');
+      setDrivers(prev => prev.map(d => d.id === driver.id ? {
+        ...d,
+        standing: json.standing,
+        lastSyncTimestamp: Date.now()
+      } : d));
+      setVerifiedStandingModal({ driver, standing: json.standing });
+      onAddLog('info', `Provider verification succeeded for ${driver.platform}.`, undefined, 'STANDING_VERIFIED');
+    } catch (error) {
+      setDrivers(prev => prev.map(d => d.id === driver.id ? { ...d, standing: undefined } : d));
+      onAddLog('warning', `Account standing for ${driver.platform} is not verified: ${error instanceof Error ? error.message : 'provider request failed'}`, undefined, 'STANDING_UNVERIFIED');
+    } finally {
+      setIsSyncVerifyingId(null);
+      setSyncVerifyStage('');
+    }
   };
 
   const handleAcknowledgeAlert = (driverId: string, violationId: string) => {
@@ -639,40 +351,28 @@ export default function RealDriverConnector({
       id,
       platform: newPlatform,
       driverName: newDriverName.trim(),
-      email: newEmail.trim() || `${newDriverName.toLowerCase().replace(/\s+/g, '.')}@delivery-fleet.net`,
-      phone: newPhone.trim() || '+1 (555) 019-2834',
-      platformDriverId: newPlatformDriverId.trim() || `${newPlatform.toUpperCase().slice(0, 3)}-${Math.floor(100000 + Math.random() * 900000)}`,
+      email: newEmail.trim(),
+      phone: newPhone.trim(),
+      platformDriverId: newPlatformDriverId.trim(),
       authMethod: newAuthMethod,
-      connectionStatus: 'connected',
+      connectionStatus: 'offline',
       zoneOrMarket: newZoneOrMarket.trim() || 'Central Metro Hub',
       vehicle: {
         make: newMake.trim() || 'Toyota',
         model: newModel.trim() || 'Camry',
         year: Number(newYear) || 2022,
-        licensePlate: newPlate.trim() || 'DRV-' + Math.floor(100 + Math.random() * 899),
+        licensePlate: newPlate.trim(),
         isEVOrHybrid: newIsEV,
         cargoCapacityCuFt: 32.0
       },
       todayEarnings: 0,
       todayTrips: 0,
-      pingLatencyMs: 22,
-      lastSyncTimestamp: Date.now(),
-      tokenExpiry: new Date(Date.now() + 30 * 86400000).toISOString(),
-      activeShift: true,
-      shiftStartTime: Date.now(),
-      apiSecretToken: 'sec_' + newPlatform.toLowerCase().replace(/\s+/g, '') + '_live_' + Math.random().toString(36).substring(2, 12),
-      webhookUrl: `https://${activeDomain}/api/drivers/webhook/${id}`,
-      antiDetection: {
-        jitterEnabled: true,
-        minDelayMs: 450,
-        maxDelayMs: 1500,
-        geofenceLock: true,
-        maxDailyAccepts: 25,
-        stealthUserAgent: `Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 ${newPlatform}Driver/4.20`,
-        autoMfaBypassAlert: true,
-        sslFingerprintCloak: true
-      },
-      notes: newNotes.trim() || `Configured as CEO verified driver account for ${newPlatform}.`
+      pingLatencyMs: 0,
+      lastSyncTimestamp: 0,
+      tokenExpiry: '',
+      activeShift: false,
+      webhookUrl: '',
+      notes: newNotes.trim() || 'Manual profile only; provider connection is not verified.'
     };
 
     setDrivers(prev => [newAccount, ...prev]);
@@ -1374,40 +1074,8 @@ export default function RealDriverConnector({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
                   
-                  {/* Secret Token */}
-                  <div className="bg-neutral-950 p-3 rounded-xl border border-neutral-800">
-                    <div className="flex items-center justify-between text-neutral-400 mb-1">
-                      <span>SESSION BEARER TOKEN</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setShowSecretMap(prev => ({ ...prev, [selectedDriver.id]: !prev[selectedDriver.id] }))}
-                          className="hover:text-white"
-                        >
-                          {showSecretMap[selectedDriver.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(selectedDriver.apiSecretToken, 'token_' + selectedDriver.id)}
-                          className="hover:text-amber-400"
-                        >
-                          {copiedId === 'token_' + selectedDriver.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                        </button>
-                      </div>
-                    </div>
-                    <p className="font-mono text-neutral-200 truncate">
-                      {showSecretMap[selectedDriver.id] ? selectedDriver.apiSecretToken : '••••••••••••••••••••••••••••••••'}
-                    </p>
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-900 text-[10px]">
-                      <span className="text-neutral-500">Expires in 14 days</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRefreshToken(selectedDriver.id)}
-                        className="text-amber-400 hover:underline cursor-pointer"
-                      >
-                        Rotate Secret
-                      </button>
-                    </div>
+                  <div className="bg-neutral-950 p-3 rounded-xl border border-neutral-800 text-neutral-400 text-xs">
+                    Provider-issued credentials are managed only by the authorized provider and server-side secret manager. This browser does not store or reveal session tokens.
                   </div>
 
                   {/* Webhook Endpoint */}
@@ -1476,49 +1144,7 @@ export default function RealDriverConnector({
                     </span>
                   </div>
 
-                  <p className="text-[11px] font-mono text-neutral-400 leading-relaxed">
-                    Delivery platforms use algorithmic anomaly detection to identify automated taps. The armor features below ensure all driver requests mimic authentic human thumb movements and GPS constraints.
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs font-mono">
-                    <div className="p-2.5 rounded-lg bg-neutral-900 border border-neutral-800">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px] text-neutral-300 font-semibold">Thumb Jitter Delay</span>
-                        <span className="text-emerald-400 text-[10px]">ACTIVE</span>
-                      </div>
-                      <p className="text-[10px] text-neutral-500">
-                        Randomizes click interval between <b>{selectedDriver.antiDetection.minDelayMs}ms</b> and <b>{selectedDriver.antiDetection.maxDelayMs}ms</b>.
-                      </p>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-neutral-900 border border-neutral-800">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px] text-neutral-300 font-semibold">Store Geofence Lock</span>
-                        <span className="text-emerald-400 text-[10px]">VERIFIED</span>
-                      </div>
-                      <p className="text-[10px] text-neutral-500">
-                        Ensures order acceptance matches physical proximity to dispatch stores.
-                      </p>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-neutral-900 border border-neutral-800">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px] text-neutral-300 font-semibold">Selfie / MFA Alert</span>
-                        <span className="text-amber-400 text-[10px]">ARMED</span>
-                      </div>
-                      <p className="text-[10px] text-neutral-500">
-                        Plays emergency siren and sends SMS if platform triggers facial scan verification.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Stealth Mobile User-Agent */}
-                  <div className="mt-2 pt-2 border-t border-neutral-800/80">
-                    <span className="text-[10px] font-mono text-neutral-500 block mb-1">HARDWARE FINGERPRINT & USER AGENT CLOAK:</span>
-                    <div className="bg-neutral-950 p-2 rounded text-[10px] font-mono text-cyan-300/80 truncate">
-                      {selectedDriver.antiDetection.stealthUserAgent}
-                    </div>
-                  </div>
+                  <p className="text-[11px] font-mono text-neutral-400 leading-relaxed">Provider connections and account standing are not verified unless an authorized provider API returns a successful response. This dashboard does not disguise traffic, bypass verification, or automate order acceptance.</p>
                 </div>
 
                 {/* Handshake Tester & Diagnostics Output */}
@@ -1654,7 +1280,7 @@ export default function RealDriverConnector({
                     <label className="block text-neutral-300 font-bold mb-1">DRIVER FULL NAME *</label>
                     <input
                       type="text"
-                      placeholder="e.g. Marcus Vance"
+                      placeholder="Enter driver name"
                       value={newDriverName}
                       onChange={(e) => setNewDriverName(e.target.value)}
                       required

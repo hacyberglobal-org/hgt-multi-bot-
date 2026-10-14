@@ -1,4 +1,5 @@
 import express from "express";
+import { timingSafeEqual } from "crypto";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
@@ -28,20 +29,10 @@ import { getOrCreateUser, getUserProfile, logUserActivity, getUserActivityLogs }
 
 dotenv.config({ override: true });
 
-// Always ensure the user-provided console secret takes active precedence
-if (process.env.CONSOLE_SECRET) {
+// Provider credentials must be configured through the deployment secret manager.
+// Never ship real or placeholder credentials as source-code fallbacks.
+if (process.env.CONSOLE_SECRET && !process.env.GEMINI_API_KEY) {
   process.env.GEMINI_API_KEY = process.env.CONSOLE_SECRET;
-} else if (!process.env.GEMINI_API_KEY) {
-  process.env.GEMINI_API_KEY = 'AQ.Ab8RN6K8yA1QorstO1pqEcZvCmOyV6TNpaW70d1GHAQIkSNRgg';
-  process.env.CONSOLE_SECRET = 'AQ.Ab8RN6K8yA1QorstO1pqEcZvCmOyV6TNpaW70d1GHAQIkSNRgg';
-}
-
-// Ensure Cloudflare API Token and Token ID are configured
-if (!process.env.CLOUDFLARE_API_TOKEN) {
-  process.env.CLOUDFLARE_API_TOKEN = 'b799deb57374c604cec6c71ed06747d49535d761e1d8602244dac1edfb6b6cb6';
-}
-if (!process.env.CLOUDFLARE_TOKEN_ID) {
-  process.env.CLOUDFLARE_TOKEN_ID = '2966e15e0df3b4d3a747d6e0efb7802c';
 }
 
 // Lazy initialization of Gemini API client
@@ -55,6 +46,18 @@ function getAiClient(): GoogleGenAI {
     aiClientInstance = new GoogleGenAI({ apiKey });
   }
   return aiClientInstance;
+}
+
+function requireAdminSecret(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const expected = process.env.SUPPORT_ADMIN_KEY;
+  const supplied = req.header("x-admin-key") || "";
+  if (!expected) return res.status(503).json({ error: "Admin operation unavailable until SUPPORT_ADMIN_KEY is configured server-side." });
+  const expectedBytes = Buffer.from(expected);
+  const suppliedBytes = Buffer.from(supplied);
+  if (expectedBytes.length !== suppliedBytes.length || !timingSafeEqual(expectedBytes, suppliedBytes)) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
 }
 
 async function startServer() {
@@ -103,7 +106,7 @@ async function startServer() {
       integrations: {
         cloudflare: {
           configured: hasCloudflare,
-          tokenId: process.env.CLOUDFLARE_TOKEN_ID || "2966e15e0df3b4d3a747d6e0efb7802c",
+          tokenId: process.env.CLOUDFLARE_TOKEN_ID || "",
           edgeDomain: "orders.hacyberglobal.dgdns.org"
         },
         telegram: {
@@ -186,10 +189,10 @@ async function startServer() {
     }
   });
 
-  app.post("/api/cloudflare/kv", async (req, res) => {
-    const accountId = req.body.accountId || process.env.CLOUDFLARE_ACCOUNT_ID;
-    const namespaceId = req.body.namespaceId || process.env.CLOUDFLARE_NAMESPACE_ID;
-    const apiToken = req.body.apiToken || process.env.CLOUDFLARE_API_TOKEN;
+  app.post("/api/cloudflare/kv", requireAdminSecret, async (req, res) => {
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const namespaceId = process.env.CLOUDFLARE_NAMESPACE_ID;
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
     const { keyName, value } = req.body;
     
     if (!accountId || !namespaceId || !apiToken || !keyName || !value) {
@@ -197,7 +200,8 @@ async function startServer() {
     }
 
     try {
-      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${keyName}`, {
+      const safeKeyName = encodeURIComponent(String(keyName));
+      const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${safeKeyName}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${apiToken}`,
@@ -216,58 +220,29 @@ async function startServer() {
   // GET /api/cloudflare/status - Cloudflare API Token & Edge status
   app.get("/api/cloudflare/status", (req, res) => {
     const rawToken = process.env.CLOUDFLARE_API_TOKEN || '';
-    const tokenId = process.env.CLOUDFLARE_TOKEN_ID || '2966e15e0df3b4d3a747d6e0efb7802c';
+    const tokenId = process.env.CLOUDFLARE_TOKEN_ID || "";
     const isConfigured = Boolean(rawToken && rawToken.length > 0);
-    const masked = rawToken.length > 14
-      ? `${rawToken.substring(0, 9)}••••••••${rawToken.substring(rawToken.length - 4)}`
-      : '••••••••';
-
-    res.json({
+        res.json({
       ok: true,
-      connected: isConfigured,
+      connected: false,
+      configured: isConfigured,
       tokenId: tokenId,
-      tokenMasked: masked,
-      tokenLength: rawToken.length,
       edgeZone: 'hgt-spark-bot-edge',
       zoneDomain: 'orders.hacyberglobal.dgdns.org',
       nameservers: ['anirban.ns.cloudflare.com', 'cecelia.ns.cloudflare.com'],
-      dnssecStatus: 'Active & Verified',
-      tlsMode: 'Full (Strict) TLS 1.3',
-      brotliCompression: true,
-      wafSecurity: 'Cloudflare Zero Trust & Orange Cloud Proxy Active',
-      rateLimit: '1200 req/min',
-      status: isConfigured ? 'ACTIVE_ARMED' : 'UNCONFIGURED',
+      dnssecStatus: 'NOT_CHECKED',
+      tlsMode: 'NOT_CHECKED',
+      brotliCompression: null,
+      wafSecurity: 'NOT_CHECKED',
+      rateLimit: 'NOT_VERIFIED',
+      status: isConfigured ? 'CONFIGURED_UNVERIFIED' : 'UNCONFIGURED',
       timestamp: new Date().toISOString()
     });
   });
 
   // POST /api/cloudflare/token - Update Cloudflare API Token & Token ID
-  app.post("/api/cloudflare/token", (req, res) => {
-    const { token, tokenId } = req.body;
-    if (!token && !tokenId) {
-      return res.status(400).json({ ok: false, error: "Either token or tokenId must be provided" });
-    }
-
-    if (token && typeof token === 'string' && token.trim().length > 0) {
-      process.env.CLOUDFLARE_API_TOKEN = token.trim();
-    }
-    if (tokenId && typeof tokenId === 'string' && tokenId.trim().length > 0) {
-      process.env.CLOUDFLARE_TOKEN_ID = tokenId.trim();
-    }
-
-    const currentToken = process.env.CLOUDFLARE_API_TOKEN || '';
-    const currentTokenId = process.env.CLOUDFLARE_TOKEN_ID || '';
-    const masked = currentToken.length > 14
-      ? `${currentToken.substring(0, 9)}••••••••${currentToken.substring(currentToken.length - 4)}`
-      : '••••••••';
-
-    return res.json({
-      ok: true,
-      message: "Cloudflare token credentials updated successfully.",
-      tokenId: currentTokenId,
-      tokenMasked: masked,
-      status: "ACTIVE_ARMED"
-    });
+  app.post("/api/cloudflare/token", requireAdminSecret, (_req, res) => {
+    return res.status(410).json({ ok: false, error: "Credential rotation must be performed in the deployment secret manager; runtime token mutation is disabled." });
   });
 
   // ==========================================
@@ -287,39 +262,16 @@ async function startServer() {
     accessLink?: string;
   }
 
-  const receiptStore: TelegramReceipt[] = [
-    {
-      id: 'rec_01',
-      userId: '123456789',
-      userName: '@driver_expert_99',
-      chatId: '123456789',
-      caption: 'Paid $130 via PayPal - Ref PAY_ID_8DX94820LK',
-      status: 'pending',
-      receivedAt: new Date(Date.now() - 3600000).toISOString()
-    },
-    {
-      id: 'rec_02',
-      userId: '987654321',
-      userName: '@spark_king_atl',
-      chatId: '987654321',
-      caption: 'Bitcoin payment completed 0.002 BTC',
-      status: 'pending',
-      receivedAt: new Date(Date.now() - 1800000).toISOString()
-    }
-  ];
+  const receiptStore: TelegramReceipt[] = [];
 
-  app.post("/api/telegram/send", async (req, res) => {
-    const { chatId, text, token, reply_markup, parse_mode } = req.body;
-    let botToken = token || process.env.TELEGRAM_BOT_TOKEN;
+  app.post("/api/telegram/send", requireAdminSecret, async (req, res) => {
+    const { chatId, text, reply_markup, parse_mode } = req.body;
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
     // Handle empty strings as well
     if (!botToken || botToken.trim() === "") {
       console.warn("Telegram Send: No token provided");
-      return res.json({ 
-        ok: false, 
-        description: "TELEGRAM_BOT_TOKEN not configured in environment vault. Please configure it in your platform settings.",
-        simulated: true 
-      });
+      return res.status(503).json({ ok: false, description: "TELEGRAM_BOT_TOKEN is not configured server-side." });
     }
 
     try {
@@ -338,17 +290,13 @@ async function startServer() {
     } catch (error) {
       console.error("Telegram Send Error:", error);
       // Fallback for network/DNS issues in restricted environments
-      res.json({ 
-        ok: false, 
-        description: "Network error or connection blocked. In preview, this is common.",
-        simulated: true
-      });
+      res.status(502).json({ ok: false, description: "Telegram request failed; no message delivery is confirmed." });
     }
   });
 
   app.post("/api/telegram/verify", async (req, res) => {
-    const { token, chatId } = req.body;
-    const botToken = token || process.env.TELEGRAM_BOT_TOKEN;
+    const { chatId } = req.body;
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
     if (!botToken) {
       return res.status(400).json({ error: "TELEGRAM_BOT_TOKEN not configured" });
@@ -364,7 +312,7 @@ async function startServer() {
       res.json(data);
     } catch (error) {
       console.error("Telegram Verify Error:", error);
-      res.json({ ok: false, error: "Network error", simulated: true });
+      res.status(502).json({ ok: false, error: "Telegram verification failed; connection is not verified." });
     }
   });
 
@@ -372,16 +320,16 @@ async function startServer() {
   app.get("/api/telegram/bot-info", async (req, res) => {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const adminChatId = process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID;
-    const botAccessLink = process.env.BOT_ACCESS_LINK || "https://t.me/multi_grabber_system_bot";
+    const botAccessLink = process.env.BOT_ACCESS_LINK || "";
 
     if (!token || token.trim() === '') {
       return res.json({
         ok: true,
         configured: false,
-        botUsername: "multi_grabber_system_bot",
-        botLink: botAccessLink,
+        botUsername: null,
+        botLink: null,
         status: "STANDBY_UNCONFIGURED",
-        message: "TELEGRAM_BOT_TOKEN not configured in environment vault. Defaulting to system grabber link."
+        message: "TELEGRAM_BOT_TOKEN and BOT_ACCESS_LINK must be configured server-side."
       });
     }
 
@@ -405,37 +353,40 @@ async function startServer() {
         return res.json({
           ok: true,
           configured: false,
-          botUsername: "multi_grabber_system_bot",
-          botLink: botAccessLink,
+          botUsername: null,
+          botLink: null,
           status: "INVALID_TOKEN",
           description: data.description || "Could not verify bot token"
         });
       }
     } catch (e: any) {
       return res.json({
-        ok: true,
-        configured: true,
-        botUsername: "multi_grabber_system_bot",
-        botLink: botAccessLink,
-        status: "PREVIEW_SIMULATED",
-        description: "Network sandbox prevented direct Telegram probe; using fallback active link."
+        ok: false,
+        configured: false,
+        botUsername: null,
+        botLink: null,
+        status: "UNVERIFIED",
+        description: "Telegram API could not be reached; connection is not verified."
       });
     }
   });
 
   // REST Endpoint: List Receipts
-  app.get("/api/telegram/receipts", (req, res) => {
+  app.get("/api/telegram/receipts", requireAdminSecret, (req, res) => {
     res.json(receiptStore);
   });
 
   // REST Endpoint: Submit Receipt
-  app.post("/api/telegram/receipt", async (req, res) => {
-    const { userId, userName, chatId, caption, photoId } = req.body;
-    const token = req.body.token || process.env.TELEGRAM_BOT_TOKEN;
-    const adminChatId = req.body.adminChatId || process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID;
+  app.post("/api/telegram/receipt", requireAuth, async (req: AuthRequest, res) => {
+    const { userName, chatId, caption, photoId } = req.body;
+    const userId = req.user?.uid;
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!userId || !chatId) return res.status(400).json({ ok: false, error: "Authenticated user and Telegram chat ID are required." });
+    const adminChatId = process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID;
+    if (!token || !adminChatId) return res.status(503).json({ ok: false, error: "Telegram bot and admin chat must be configured server-side." });
     
-    const targetUserId = String(userId || '123456789');
-    const targetChatId = String(chatId || targetUserId);
+    const targetUserId = String(userId);
+    const targetChatId = String(chatId);
     const targetUserName = userName || `@user_${targetUserId}`;
 
     const newRec: TelegramReceipt = {
@@ -479,13 +430,16 @@ async function startServer() {
   });
 
   // REST Endpoint: Approve Payment (/approve <user_id>)
-  app.post("/api/telegram/approve", async (req, res) => {
-    const { userId, link } = req.body;
-    const token = req.body.token || process.env.TELEGRAM_BOT_TOKEN;
-    const botAccessLink = link || process.env.BOT_ACCESS_LINK || "https://t.me/multi_grabber_system_bot";
+  app.post("/api/telegram/approve", requireAdminSecret, async (req, res) => {
+    const { userId } = req.body;
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const botAccessLink = process.env.BOT_ACCESS_LINK;
 
     if (!userId) {
       return res.status(400).json({ error: "Missing userId" });
+    }
+    if (!token || !botAccessLink) {
+      return res.status(503).json({ ok: false, error: "Telegram bot token and approved BOT_ACCESS_LINK must be configured server-side." });
     }
 
     const targetUserId = String(userId);
@@ -511,22 +465,31 @@ async function startServer() {
       telegramResult = await response.json();
     } catch (err) {
       console.warn("Telegram sendMessage error during approve:", err);
-      telegramResult = { ok: true, simulated: true };
+      telegramResult = { ok: false, error: "Telegram delivery failed; approval was not confirmed." };
     }
 
-    // 2. Update status in store
+    if (!telegramResult?.ok) return res.status(502).json({ ok: false, error: "Telegram did not confirm delivery; receipt remains pending.", telegramResult });
+
+    // 2. Update status only after Telegram confirms the send.
     const rec = receiptStore.find(r => r.userId === targetUserId && r.status === 'pending');
     if (rec) {
       rec.status = 'approved';
       rec.accessLink = botAccessLink;
     }
-
     const message = `Approved and link sent to ${targetUserId}.`;
     res.json({ ok: true, message, botAccessLink, telegramResult });
   });
 
   // Webhook for Telegram Interactive Bot Commands & Receipt Verification
   app.post("/api/telegram/webhook", async (req, res) => {
+    const expectedWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || "";
+    const suppliedWebhookSecret = req.header("x-telegram-bot-api-secret-token") || "";
+    if (!expectedWebhookSecret) return res.status(503).json({ ok: false, error: "Telegram webhook secret is not configured server-side." });
+    const expectedWebhookBytes = Buffer.from(expectedWebhookSecret);
+    const suppliedWebhookBytes = Buffer.from(suppliedWebhookSecret);
+    if (expectedWebhookBytes.length !== suppliedWebhookBytes.length || !timingSafeEqual(expectedWebhookBytes, suppliedWebhookBytes)) {
+      return res.status(401).json({ ok: false, error: "Invalid Telegram webhook signature." });
+    }
     const update = req.body;
     if (update && update.message) {
       const message = update.message;
@@ -541,7 +504,7 @@ async function startServer() {
 
       const token = process.env.TELEGRAM_BOT_TOKEN;
       const adminChatId = process.env.ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID;
-      const defaultBotLink = process.env.BOT_ACCESS_LINK || 'https://t.me/multi_grabber_system_bot';
+      const defaultBotLink = process.env.BOT_ACCESS_LINK || '';
 
       const sendTgMsg = async (targetId: string | number, msgText: string, replyMarkup?: any) => {
         if (!token) {
@@ -565,9 +528,9 @@ async function startServer() {
       if (text.startsWith('/approve')) {
         const parts = text.trim().split(/\s+/);
         const targetUserId = parts[1];
-        const botAccessLink = parts[2] || defaultBotLink;
+        const botAccessLink = defaultBotLink;
 
-        if (targetUserId) {
+        if (targetUserId && botAccessLink && adminChatId && String(chatId) === String(adminChatId)) {
           // Send link to client
           await sendTgMsg(
             targetUserId,
@@ -1549,125 +1512,44 @@ async function startServer() {
     }
   });
 
-  app.post('/api/stripe/instant-payout', async (req, res) => {
-    try {
-      const { amount, method, recipient, stripeAccountId } = req.body;
-      const stripe = getStripe();
-
-      const payoutId = `po_${Math.random().toString(36).substring(2, 10)}${Date.now().toString().slice(-4)}`;
-      const timestamp = new Date().toISOString();
-
-      if (stripe && stripeAccountId) {
-        try {
-          const payout = await stripe.payouts.create(
-            {
-              amount: Math.round((amount || 0) * 100),
-              currency: 'usd',
-              method: 'instant',
-              statement_descriptor: 'HGT INSTANT PAYOUT',
-            },
-            {
-              stripeAccount: stripeAccountId,
-            }
-          );
-          return res.json({
-            ok: true,
-            payoutId: payout.id,
-            amount: payout.amount / 100,
-            status: payout.status === 'paid' ? 'Completed' : 'Settling',
-            method: method || 'Instant Debit',
-            recipient: recipient || 'Linked Bank/Debit Card',
-            arrivalDate: 'Instant (0-30 seconds)',
-            timestamp,
-            liveStripe: true
-          });
-        } catch (err: any) {
-          console.warn("Stripe instant payout attempt error, returning instant settlement payload:", err.message);
-        }
-      }
-
-      // Return instant payout settlement confirmation
-      res.json({
-        ok: true,
-        payoutId,
-        amount: Number(amount || 0),
-        status: 'Completed',
-        method: method || 'Instant Settlement',
-        recipient: recipient || 'Linked Account',
-        arrivalDate: 'Instant (0-30 seconds)',
-        timestamp,
-        liveStripe: false
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
+  app.post('/api/stripe/instant-payout', requireAuth, (_req, res) => {
+    return res.status(503).json({
+      ok: false,
+      paid: false,
+      error: "Instant payouts are disabled until the signed-in user's Stripe account ownership, payout eligibility, and live provider response can be verified."
+    });
   });
 
   app.post('/api/dns-lookup', async (req, res) => {
-    const { domain } = req.body;
-    if (!domain) {
-      return res.status(400).json({ error: "Domain parameter is required" });
+    const domain = String(req.body?.domain || '').trim().toLowerCase().replace(/\.$/, '');
+    if (!domain || domain.length > 253 || !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(domain)) {
+      return res.status(400).json({ ok: false, error: "A valid DNS hostname is required." });
     }
 
     try {
-      const dnsPromises = dns.promises;
-      let cname: string[] = [];
-      let txt: string[][] = [];
-      let ns: string[] = [];
-      let a: string[] = [];
-
-      try {
-        cname = await dnsPromises.resolveCname(domain);
-      } catch (e) {}
-
-      try {
-        txt = await dnsPromises.resolveTxt(domain);
-      } catch (e) {}
-
-      try {
-        ns = await dnsPromises.resolveNs(domain);
-      } catch (e) {}
-
-      try {
-        a = await dnsPromises.resolve4(domain);
-      } catch (e) {}
-
-      const nameServers = [
-        { name: "Google Public DNS", ip: "8.8.8.8", status: cname.length || a.length ? "propagated" : "propagating", latency: "12ms" },
-        { name: "Cloudflare DNS", ip: "1.1.1.1", status: cname.length || a.length ? "propagated" : "propagating", latency: "8ms" },
-        { name: "OpenDNS", ip: "208.67.222.222", status: cname.length || a.length ? "propagated" : "propagating", latency: "15ms" },
-        { name: "Quad9 DNS", ip: "9.9.9.9", status: cname.length || a.length ? "propagated" : "propagating", latency: "18ms" }
-      ];
-
-      res.json({
+      const results = await Promise.allSettled([
+        dns.promises.resolveCname(domain),
+        dns.promises.resolveTxt(domain),
+        dns.promises.resolveNs(domain),
+        dns.promises.resolve4(domain)
+      ]);
+      const value = (index: number) => results[index].status === 'fulfilled' ? results[index].value : [];
+      const records = {
+        CNAME: value(0),
+        TXT: (value(1) as string[][]).map((parts: string[]) => parts.join(' ')),
+        NS: value(2),
+        A: value(3)
+      };
+      const recordCount = records.CNAME.length + records.TXT.length + records.NS.length + records.A.length;
+      return res.json({
+        ok: true,
         domain,
-        records: {
-          CNAME: cname.length ? cname : ["hacyber-global.github.io"],
-          TXT: txt.length ? txt.map(t => t.join(" ")) : ["google-site-verification=n7ECyUmQagKB2NSjhm0UWuVnhhvYdxWQH5ez_l2F75w", "v=spf1 include:_spf.mx.cloudflare.net ~all"],
-          NS: ns.length ? ns : ["anirban.ns.cloudflare.com", "cecelia.ns.cloudflare.com"],
-          A: a.length ? a : ["104.21.32.201", "172.67.182.13"]
-        },
-        nameServers,
-        syncedAt: new Date().toISOString()
+        lookupStatus: recordCount > 0 ? 'records_found' : 'no_records_found',
+        records,
+        timestamp: new Date().toISOString()
       });
-    } catch (error: any) {
-      res.json({
-        domain,
-        records: {
-          CNAME: ["hacyber-global.github.io"],
-          TXT: ["google-site-verification=n7ECyUmQagKB2NSjhm0UWuVnhhvYdxWQH5ez_l2F75w", "v=spf1 include:_spf.mx.cloudflare.net ~all"],
-          NS: ["anirban.ns.cloudflare.com", "cecelia.ns.cloudflare.com"],
-          A: ["104.21.32.201", "172.67.182.13"]
-        },
-        nameServers: [
-          { name: "Google Public DNS", ip: "8.8.8.8", status: "propagated", latency: "14ms" },
-          { name: "Cloudflare DNS", ip: "1.1.1.1", status: "propagated", latency: "7ms" },
-          { name: "OpenDNS", ip: "208.67.222.222", status: "propagated", latency: "19ms" },
-          { name: "Quad9 DNS", ip: "9.9.9.9", status: "propagated", latency: "22ms" }
-        ],
-        syncedAt: new Date().toISOString(),
-        note: "Fallback records for sandbox validation environments."
-      });
+    } catch {
+      return res.status(502).json({ ok: false, domain, error: "DNS lookup could not be completed." });
     }
   });
 
@@ -1676,27 +1558,11 @@ async function startServer() {
   // ==========================================
 
   // In-memory / persistent cache of real driver accounts
-  let realDriversStore: any[] = [
-    {
-      id: 'drv_spark_01',
-      platform: 'Spark',
-      driverName: 'Marcus Vance (Lead)',
-      email: 'm.vance.driver@gmail.com',
-      phone: '+1 (404) 892-1140',
-      platformDriverId: 'SPK-ATL-882910',
-      authMethod: 'device_companion',
-      connectionStatus: 'in_shift',
-      zoneOrMarket: 'Atlanta Metro Hub #4281',
-      todayEarnings: 248.50,
-      todayTrips: 9,
-      pingLatencyMs: 24,
-      lastSyncTimestamp: Date.now(),
-      activeShift: true
-    }
-  ];
+  // No sample driver records are seeded into production.
+  let realDriversStore: any[] = [];
 
   // GET /api/drivers - List all connected driver accounts
-  app.get("/api/drivers", (req, res) => {
+  app.get("/api/drivers", requireAuth, (req, res) => {
     res.json({
       ok: true,
       totalDrivers: realDriversStore.length,
@@ -1706,56 +1572,29 @@ async function startServer() {
   });
 
   // POST /api/drivers/connect - Register or pair new driver account
-  app.post("/api/drivers/connect", (req, res) => {
-    const { platform, driverName, email, phone, platformDriverId, authMethod, zoneOrMarket, vehicle, notes } = req.body;
-
-    if (!driverName || !platform) {
-      return res.status(400).json({ ok: false, error: "driverName and platform are required." });
-    }
-
-    const newId = `drv_${platform.toLowerCase().replace(/[^a-z0-9]/g, '')}_${Date.now()}`;
-    const newDriver = {
-      id: newId,
-      platform,
-      driverName,
-      email: email || `${driverName.toLowerCase().replace(/\s+/g, '.')}@delivery-fleet.net`,
-      phone: phone || '+1 (555) 019-2834',
-      platformDriverId: platformDriverId || `${platform.toUpperCase().slice(0, 3)}-${Math.floor(100000 + Math.random() * 900000)}`,
-      authMethod: authMethod || 'oauth_direct',
-      connectionStatus: 'connected',
-      zoneOrMarket: zoneOrMarket || 'Central Metro Hub',
-      vehicle: vehicle || { make: 'Toyota', model: 'RAV4', year: 2023, licensePlate: 'DRV-901' },
-      todayEarnings: 0,
-      todayTrips: 0,
-      pingLatencyMs: Math.floor(Math.random() * 20) + 15,
-      lastSyncTimestamp: Date.now(),
-      activeShift: false,
-      apiSecretToken: `sec_${platform.toLowerCase().replace(/[^a-z0-9]/g, '')}_live_${Math.random().toString(36).substring(2, 14)}`,
-      webhookUrl: `/api/drivers/webhook/${newId}`,
-      notes: notes || 'Connected via CEO Portal'
-    };
-
-    realDriversStore.unshift(newDriver);
-    res.json({ ok: true, message: "Driver account paired successfully.", driver: newDriver });
-  });
-
-  // POST /api/drivers/test-ping - Live ping handshake check
-  app.post("/api/drivers/test-ping", (req, res) => {
-    const { driverId, platform } = req.body;
-    const latency = Math.floor(Math.random() * 25) + 12;
-    res.json({
-      ok: true,
-      driverId,
-      platform: platform || 'Spark',
-      pingMs: latency,
-      protocol: "TLS 1.3 / AES-256-GCM",
-      gatewayStatus: "HTTP 200 OK",
-      timestamp: new Date().toISOString()
+  app.post("/api/drivers/connect", requireAuth, (_req, res) => {
+    return res.status(503).json({
+      ok: false,
+      connected: false,
+      error: "Driver profile entry is not a provider connection. Configure an authorized provider integration before reporting a connected account."
     });
   });
 
-  // POST /api/drivers/webhook/:driverId - Real-time inbound webhook receiver for driver app events
+  app.post("/api/drivers/test-ping", requireAuth, (_req, res) => {
+    return res.status(503).json({
+      ok: false,
+      verified: false,
+      error: "No authorized provider health-check endpoint is configured; latency was not measured."
+    });
+  });
+
   app.post("/api/drivers/webhook/:driverId", (req, res) => {
+    const expectedSecret = process.env.DRIVER_WEBHOOK_SECRET || "";
+    const suppliedSecret = req.header("x-driver-webhook-secret") || "";
+    if (!expectedSecret) return res.status(503).json({ ok: false, error: "Driver webhook secret is not configured." });
+    const expectedBytes = Buffer.from(expectedSecret);
+    const suppliedBytes = Buffer.from(suppliedSecret);
+    if (expectedBytes.length !== suppliedBytes.length || !timingSafeEqual(expectedBytes, suppliedBytes)) return res.status(401).json({ ok: false, error: "Invalid driver webhook secret." });
     const { driverId } = req.params;
     const payload = req.body;
     console.log(`[Driver Webhook] Event received for driver ${driverId}:`, payload);
@@ -1770,168 +1609,16 @@ async function startServer() {
   });
 
   // POST /api/drivers/sync-verify - Query platform APIs for real account standing, ratings, and policy violations
-  app.post("/api/drivers/sync-verify", (req, res) => {
-    const { driverId, platform, driverName } = req.body;
-
-    const plat = (platform || 'Spark').toString();
-    const isHighRiskSample = driverId?.includes('02') || plat === 'DoorDash';
-
-    // Tailor realistic violations and alerts according to platform
-    let violations: any[] = [];
-    let healthScore = 98;
-    let standingStatus = 'excellent';
-    let customerRating = 4.96;
-    let completionRate = 99;
-    let onTimeArrival = 97;
-    let acceptanceRate = 86;
-    let deactivationRisk = 1.8;
-
-    if (plat === 'Spark') {
-      healthScore = 98;
-      standingStatus = 'excellent';
-      customerRating = 4.97;
-      completionRate = 100;
-      onTimeArrival = 98;
-      acceptanceRate = 78;
-      deactivationRisk = 1.2;
-      violations = [
-        {
-          id: 'alt_spk_01',
-          type: 'document_expiry',
-          title: 'Vehicle Insurance Renewal Notice',
-          severity: 'info',
-          date: '2026-09-01',
-          details: 'Commercial/Personal policy renewal document due in 24 days. Upload updated insurance card to prevent dispatch pauses.',
-          resolved: false,
-          canAppeal: false
-        },
-        {
-          id: 'alt_spk_02',
-          type: 'mfa_checkpoint',
-          title: 'Routine Facial Verification Checkpoint Passed',
-          severity: 'low',
-          date: '2026-09-08',
-          details: 'Real-time selfie biometrics successfully matched DDI registered profile with 99.4% confidence score.',
-          resolved: true,
-          canAppeal: false
-        }
-      ];
-    } else if (plat === 'DoorDash') {
-      healthScore = 89;
-      standingStatus = 'good';
-      customerRating = 4.88;
-      completionRate = 96;
-      onTimeArrival = 92;
-      acceptanceRate = 72;
-      deactivationRisk = 6.4;
-      violations = [
-        {
-          id: 'cv_dd_101',
-          type: 'late_arrival',
-          title: 'Late Arrival Contract Violation (Order #DD-8819)',
-          severity: 'medium',
-          date: '2026-09-04',
-          details: 'Arrived at pickup location 14 minutes past delivery estimate. Merchant wait delay reported. Appeal under automated review.',
-          resolved: false,
-          canAppeal: true
-        },
-        {
-          id: 'cv_dd_102',
-          type: 'customer_report',
-          title: 'Order Not Delivered Dispute (Resolved)',
-          severity: 'low',
-          date: '2026-08-19',
-          details: 'Customer reported non-receipt. GPS coordinates and photo timestamp validated drop-off at correct front porch. Violation removed.',
-          resolved: true,
-          canAppeal: false
-        }
-      ];
-    } else if (plat === 'Amazon Flex') {
-      healthScore = 96;
-      standingStatus = 'excellent';
-      customerRating = 4.95;
-      completionRate = 99;
-      onTimeArrival = 98;
-      acceptanceRate = 94;
-      deactivationRisk = 2.1;
-      violations = [
-        {
-          id: 'alt_flex_01',
-          type: 'policy_notice',
-          title: 'Package Delivery Completion Standard Met',
-          severity: 'info',
-          date: '2026-09-05',
-          details: 'Fantastic standing tier achieved for Station VIL1. Priority surge block reservation access granted for next cycle.',
-          resolved: true,
-          canAppeal: false
-        }
-      ];
-    } else {
-      healthScore = 94;
-      standingStatus = 'good';
-      customerRating = 4.91;
-      completionRate = 97;
-      onTimeArrival = 95;
-      acceptanceRate = 80;
-      deactivationRisk = 3.5;
-      violations = [
-        {
-          id: 'alt_gen_01',
-          type: 'policy_notice',
-          title: 'Annual Terms of Service & Privacy Acceptance',
-          severity: 'info',
-          date: '2026-08-30',
-          details: 'Platform terms accepted on file. Account is in full compliance.',
-          resolved: true,
-          canAppeal: false
-        }
-      ];
-    }
-
-    const standingData = {
-      status: standingStatus,
-      healthScore,
-      customerRating,
-      completionRatePercent: completionRate,
-      onTimeArrivalPercent: onTimeArrival,
-      acceptanceRatePercent: acceptanceRate,
-      deactivationRiskPercent: deactivationRisk,
-      lastVerifiedAt: new Date().toISOString(),
-      pendingViolations: violations,
-      platformStandingSummary: `Account verified with ${plat} Trust & Safety gateway. Status: ${standingStatus.toUpperCase()} (${healthScore}/100 Health Score).`
-    };
-
-    // Update in-memory driver store if matching driver exists
-    if (driverId) {
-      const match = realDriversStore.find(d => d.id === driverId);
-      if (match) {
-        match.standing = standingData;
-        match.lastSyncTimestamp = Date.now();
-      }
-    }
-
-    res.json({
-      ok: true,
-      driverId: driverId || 'drv_unknown',
-      platform: plat,
-      driverName: driverName || 'Verified Driver',
-      standing: standingData,
-      verifiedAt: new Date().toISOString()
+  // Account standing must come from an approved provider integration, never fabricated sample values.
+  app.post("/api/drivers/sync-verify", requireAuth, (_req, res) => {
+    return res.status(503).json({
+      ok: false,
+      verified: false,
+      error: "Authorized account-standing provider integration is not configured. No standing data was verified."
     });
   });
 
-  // =========================================================================
-  // GLOBAL SUPPORT-ANALYST BOTGRABBER & PROVIDER-AGNOSTIC CONNECTOR SUITE
-  // =========================================================================
-
-  let botGrabberMode: 'simulation_safe' | 'production_live' = 'simulation_safe';
-  let circuitBreakerState = {
-    tripped: false,
-    trippedAt: null as string | null,
-    reason: null as string | null,
-    autoTripCount: 0
-  };
-
+  // Provider connector registry starts empty until an authorized integration is configured.
   interface ServerConnector {
     id: string;
     name: string;
@@ -1962,320 +1649,25 @@ async function startServer() {
     antiFingerprintHeader: string;
     environment: 'sandbox_simulation' | 'production_gateway';
   }
+  let botGrabberMode: 'simulation_safe' | 'production_live' = 'simulation_safe';
+  let circuitBreakerState = {
+    tripped: false,
+    trippedAt: null as string | null,
+    reason: null as string | null,
+    autoTripCount: 0
+  };
+  const botConnectorsStore: ServerConnector[] = [];
+  const botGrabberIncidentsStore: any[] = [];
+  const botGrabberTicketsStore: any[] = [];
 
-  const botConnectorsStore: ServerConnector[] = [
-    {
-      id: 'conn_spark_01',
-      name: 'Spark Delivery Gateway Primary',
-      providerType: 'walmart_spark',
-      protocol: 'rest_https',
-      endpointUrl: 'https://spark-gateway.walmartlabs.internal/v2/offers/dispatch',
-      authType: 'bearer_token',
-      authTokenMasked: 'spk_live_••••••••8e4f',
-      rateLimitPerMin: 60,
-      currentRequestsPerMin: 14,
-      pingMs: 24,
-      lastHealthCheck: new Date().toISOString(),
-      isOnline: true,
-      enabled: true,
-      consent: {
-        status: 'consented',
-        consentTimestamp: new Date(Date.now() - 86400000 * 3).toISOString(),
-        consentedBy: 'Carlos M. (Fleet Operator)',
-        authorizedScopes: ['offers:read', 'offers:evaluate', 'offers:accept_simulation_only', 'anti_detection:stealth_apply'],
-        signatureHash: 'sig_sha256_9f8c2b7a4e1d6c8b',
-        legalNoticeAccepted: true
-      },
-      totalOffersEvaluated: 1420,
-      totalOffersGrabbed: 88,
-      failedRequestsCount: 0,
-      antiFingerprintHeader: 'Chrome/124.0.0.0 Mobile Safari/537.36 SparkClient/4.19',
-      environment: 'sandbox_simulation'
-    },
-    {
-      id: 'conn_doordash_02',
-      name: 'DoorDash Drive Dasher Dispatch',
-      providerType: 'doordash',
-      protocol: 'rest_https',
-      endpointUrl: 'https://openapi.doordash.com/drive/v2/deliveries/quotes',
-      authType: 'oauth2_jwt',
-      authTokenMasked: 'dd_jwt_••••••••c92b',
-      rateLimitPerMin: 120,
-      currentRequestsPerMin: 22,
-      pingMs: 31,
-      lastHealthCheck: new Date().toISOString(),
-      isOnline: true,
-      enabled: true,
-      consent: {
-        status: 'consented',
-        consentTimestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
-        consentedBy: 'Sarah J. (Driver)',
-        authorizedScopes: ['offers:read', 'offers:evaluate', 'offers:accept_simulation_only'],
-        signatureHash: 'sig_sha256_3b1d7f4a8c9e0a2f',
-        legalNoticeAccepted: true
-      },
-      totalOffersEvaluated: 984,
-      totalOffersGrabbed: 52,
-      failedRequestsCount: 1,
-      antiFingerprintHeader: 'DasherApp/2.285.0 iOS/17.4.1 DeviceUUID/anon-dd',
-      environment: 'sandbox_simulation'
-    },
-    {
-      id: 'conn_uber_03',
-      name: 'Uber Eats Driver Cluster',
-      providerType: 'uber_eats',
-      protocol: 'websocket_wss',
-      endpointUrl: 'wss://driver-gateway.uber.com/v1/dispatch/stream',
-      authType: 'mtls_cert',
-      authTokenMasked: 'ubr_cert_••••••••55a1',
-      rateLimitPerMin: 90,
-      currentRequestsPerMin: 18,
-      pingMs: 19,
-      lastHealthCheck: new Date().toISOString(),
-      isOnline: true,
-      enabled: true,
-      consent: {
-        status: 'pending_consent',
-        consentTimestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
-        consentedBy: 'Marcus R. (Pending Signature)',
-        authorizedScopes: ['offers:read'],
-        signatureHash: 'sig_pending_verification',
-        legalNoticeAccepted: false
-      },
-      totalOffersEvaluated: 340,
-      totalOffersGrabbed: 0,
-      failedRequestsCount: 0,
-      antiFingerprintHeader: 'UberDriver/4.450.1 Android/14 Pixel8',
-      environment: 'sandbox_simulation'
-    },
-    {
-      id: 'conn_flex_04',
-      name: 'Amazon Flex Logistics Relays',
-      providerType: 'amazon_flex',
-      protocol: 'rest_https',
-      endpointUrl: 'https://flex-capacity.amazon.com/v3/serviceArea/offers',
-      authType: 'hmac_sha256',
-      authTokenMasked: 'amz_sigv4_••••••••33f8',
-      rateLimitPerMin: 45,
-      currentRequestsPerMin: 9,
-      pingMs: 42,
-      lastHealthCheck: new Date().toISOString(),
-      isOnline: true,
-      enabled: false,
-      consent: {
-        status: 'revoked',
-        consentTimestamp: new Date(Date.now() - 86400000 * 6).toISOString(),
-        consentedBy: 'Elena P. (Revoked by driver)',
-        authorizedScopes: [],
-        signatureHash: 'sig_revoked_at_driver_request',
-        legalNoticeAccepted: false,
-        revocationReason: 'Driver requested complete decoupling from background grabbing.'
-      },
-      totalOffersEvaluated: 210,
-      totalOffersGrabbed: 12,
-      failedRequestsCount: 2,
-      antiFingerprintHeader: 'RabbitFlex/3.99.1 AmazonOS/FireHD',
-      environment: 'sandbox_simulation'
-    },
-    {
-      id: 'conn_telegram_05',
-      name: 'Telegram Auto-Grabber Bot API',
-      providerType: 'telegram_bot',
-      protocol: 'mcp_jsonrpc',
-      endpointUrl: 'https://api.telegram.org/bot/webhook/relay',
-      authType: 'api_key_secret',
-      authTokenMasked: '7920194812:••••••••xyz4',
-      rateLimitPerMin: 180,
-      currentRequestsPerMin: 35,
-      pingMs: 16,
-      lastHealthCheck: new Date().toISOString(),
-      isOnline: true,
-      enabled: true,
-      consent: {
-        status: 'consented',
-        consentTimestamp: new Date(Date.now() - 86400000 * 10).toISOString(),
-        consentedBy: 'System Administrator',
-        authorizedScopes: ['offers:read', 'offers:evaluate', 'telemetry:export'],
-        signatureHash: 'sig_sha256_tg_bot_valid',
-        legalNoticeAccepted: true
-      },
-      totalOffersEvaluated: 2500,
-      totalOffersGrabbed: 190,
-      failedRequestsCount: 0,
-      antiFingerprintHeader: 'TelegramBot/6.9 NodeAgent/20',
-      environment: 'sandbox_simulation'
-    },
-    {
-      id: 'conn_appdeploy_06',
-      name: 'AppDeploy.ai MCP & Agent Hub',
-      providerType: 'appdeploy_ai',
-      protocol: 'mcp_jsonrpc',
-      endpointUrl: 'https://api-v2.appdeploy.ai/mcp',
-      authType: 'bearer_token',
-      authTokenMasked: 'ad_mcp_••••••••90a1',
-      rateLimitPerMin: 150,
-      currentRequestsPerMin: 12,
-      pingMs: 28,
-      lastHealthCheck: new Date().toISOString(),
-      isOnline: true,
-      enabled: true,
-      consent: {
-        status: 'consented',
-        consentTimestamp: new Date(Date.now() - 86400000 * 1).toISOString(),
-        consentedBy: 'DevOps / Release Engineer',
-        authorizedScopes: ['offers:read', 'offers:evaluate', 'offers:accept_simulation_only', 'telemetry:export'],
-        signatureHash: 'sig_sha256_ad_mcp_authenticated',
-        legalNoticeAccepted: true
-      },
-      totalOffersEvaluated: 640,
-      totalOffersGrabbed: 41,
-      failedRequestsCount: 0,
-      antiFingerprintHeader: 'AppDeploy-MCP/2.4.0 CloudGateway',
-      environment: 'sandbox_simulation'
-    },
-    {
-      id: 'conn_console_07',
-      name: 'Google AI Studio Console Agent',
-      providerType: 'custom_gateway',
-      protocol: 'rest_https',
-      endpointUrl: 'https://generativelanguage.googleapis.com/v1beta',
-      authType: 'api_key_secret',
-      authTokenMasked: 'AQ.Ab8RN6K••••••••SNRgg',
-      rateLimitPerMin: 360,
-      currentRequestsPerMin: 14,
-      pingMs: 12,
-      lastHealthCheck: new Date().toISOString(),
-      isOnline: true,
-      enabled: true,
-      consent: {
-        status: 'consented',
-        consentTimestamp: new Date().toISOString(),
-        consentedBy: 'Console Operator (hacybertech@gmail.com)',
-        authorizedScopes: ['console:admin', 'ai:analyze', 'dispatch:eval', 'telemetry:stream'],
-        signatureHash: 'sig_sha256_aq_ab8_console_verified',
-        legalNoticeAccepted: true
-      },
-      totalOffersEvaluated: 1240,
-      totalOffersGrabbed: 96,
-      failedRequestsCount: 0,
-      antiFingerprintHeader: 'GoogleAIStudio/Console-v2.4 Node/22.20',
-      environment: 'production_gateway'
-    },
-    {
-      id: 'conn_cloudflare_08',
-      name: 'Cloudflare Edge Proxy & Zero Trust DNS',
-      providerType: 'custom_gateway',
-      protocol: 'rest_https',
-      endpointUrl: 'https://api.cloudflare.com/client/v4',
-      authType: 'bearer_token',
-      authTokenMasked: 'b799deb57••••••••6cb6',
-      rateLimitPerMin: 1200,
-      currentRequestsPerMin: 18,
-      pingMs: 7,
-      lastHealthCheck: new Date().toISOString(),
-      isOnline: true,
-      enabled: true,
-      consent: {
-        status: 'consented',
-        consentTimestamp: new Date().toISOString(),
-        consentedBy: 'Cloudflare Administrator (hacybertech@gmail.com)',
-        authorizedScopes: ['telemetry:export', 'anti_detection:stealth_apply'],
-        signatureHash: 'sig_cf_2966e15e0df3b4d3a747d6e0efb7802c',
-        legalNoticeAccepted: true
-      },
-      totalOffersEvaluated: 3410,
-      totalOffersGrabbed: 312,
-      failedRequestsCount: 0,
-      antiFingerprintHeader: 'Cloudflare-Edge/2.0 TLS/1.3 WorkerRay/8f20',
-      environment: 'production_gateway'
-    }
-  ];
-
-  let botGrabberTicketsStore: any[] = [
-    {
-      id: 'TICK-9021',
-      subject: 'Elevated Latency Jitter on Spark Delivery TLS Handshake',
-      priority: 'high',
-      status: 'investigating',
-      createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-      affectedProvider: 'Walmart Spark',
-      operatorNotes: 'Detected 45ms jitter variance during peak 11:30 AM surge. Recommended enabling local socket pooling.',
-      diagnosticTelemetryBundle: {
-        latencyMs: 78,
-        jitterMs: 45,
-        errorRate: 0.02,
-        activeMode: 'simulation_safe',
-        consentState: 'CONSENTED',
-        botHealthScore: 94
-      }
-    }
-  ];
-
-  let botGrabberIncidentsStore: any[] = [
-    {
-      id: 'INC-401',
-      timestamp: new Date(Date.now() - 3600000 * 3).toISOString(),
-      severity: 'medium',
-      category: 'rate_limit',
-      title: 'Threshold Guard Tripped on Amazon Flex',
-      description: 'Request velocity hit 88% of assigned quota. Jitter throttling engaged automatically.',
-      remedyAction: 'Applied 150ms algorithmic backoff delay.',
-      affectedConnectorId: 'conn_flex_04',
-      resolved: true
-    },
-    {
-      id: 'INC-402',
-      timestamp: new Date(Date.now() - 3600000 * 1).toISOString(),
-      severity: 'low',
-      category: 'consent_violation',
-      title: 'Uber Eats Gateway Inactive: Awaiting Driver Signature',
-      description: 'Connector conn_uber_03 is blocked from grabbing offers until driver completes consent authorization.',
-      remedyAction: 'Prompt driver via SMS/Portal to sign consent authorization.',
-      affectedConnectorId: 'conn_uber_03',
-      resolved: false
-    }
-  ];
-
-  // 1. GET /api/botgrabber/status
-  app.get('/api/botgrabber/status', (req, res) => {
-    const totalConnectors = botConnectorsStore.length;
-    const activeOnline = botConnectorsStore.filter(c => c.isOnline && c.enabled).length;
-    const consentedCount = botConnectorsStore.filter(c => c.consent.status === 'consented').length;
-    const pendingConsentCount = botConnectorsStore.filter(c => c.consent.status === 'pending_consent').length;
-    const revokedConsentCount = botConnectorsStore.filter(c => c.consent.status === 'revoked').length;
-
-    // Calculate bot health score (0-100)
-    let healthScore = 100;
-    if (circuitBreakerState.tripped) healthScore -= 50;
-    if (pendingConsentCount > 0) healthScore -= pendingConsentCount * 5;
-    if (revokedConsentCount > 0) healthScore -= revokedConsentCount * 3;
-    const avgPing = Math.round(botConnectorsStore.reduce((acc, c) => acc + c.pingMs, 0) / (totalConnectors || 1));
-    if (avgPing > 50) healthScore -= 10;
-    healthScore = Math.max(10, Math.min(100, healthScore));
-
+  app.get('/api/botgrabber/status', (_req, res) => {
     res.json({
       ok: true,
-      mode: botGrabberMode,
-      circuitBreaker: circuitBreakerState,
-      healthScore,
-      status: circuitBreakerState.tripped 
-        ? 'circuit_tripped' 
-        : botGrabberMode === 'simulation_safe' 
-        ? 'simulation_dry_run' 
-        : 'listening',
-      metrics: {
-        totalConnectors,
-        activeOnline,
-        consentedCount,
-        pendingConsentCount,
-        revokedConsentCount,
-        averagePingMs: avgPing,
-        totalOffersEvaluated: botConnectorsStore.reduce((acc, c) => acc + c.totalOffersEvaluated, 0),
-        totalOffersGrabbed: botConnectorsStore.reduce((acc, c) => acc + c.totalOffersGrabbed, 0),
-        algorithmicJitterMs: 14,
-        antiDetectionStealth: '100% Active'
-      },
-      timestamp: new Date().toISOString()
+      mode: 'manual_only',
+      status: 'UNVERIFIED',
+      automatedAcceptanceEnabled: false,
+      verifiedProviderCount: 0,
+      message: 'Provider connections and telemetry are not verified. Use official provider apps for final decisions.'
     });
   });
 
@@ -2290,151 +1682,32 @@ async function startServer() {
   });
 
   // 3. POST /api/botgrabber/connectors
-  app.post('/api/botgrabber/connectors', (req, res) => {
-    const { name, providerType, protocol, endpointUrl, authType, authToken, rateLimitPerMin, environment } = req.body;
-    if (!name || !providerType || !endpointUrl) {
-      return res.status(400).json({ ok: false, error: 'Missing required connector parameters (name, providerType, endpointUrl)' });
-    }
-
-    const newConnector: ServerConnector = {
-      id: `conn_${providerType.replace('_', '')}_${Date.now().toString().slice(-4)}`,
-      name,
-      providerType,
-      protocol: protocol || 'rest_https',
-      endpointUrl,
-      authType: authType || 'bearer_token',
-      authTokenMasked: authToken ? `${authToken.slice(0, 4)}••••••••${authToken.slice(-4)}` : 'token_••••••••auto',
-      rateLimitPerMin: Number(rateLimitPerMin) || 60,
-      currentRequestsPerMin: 0,
-      pingMs: Math.floor(Math.random() * 25) + 15,
-      lastHealthCheck: new Date().toISOString(),
-      isOnline: true,
-      enabled: true,
-      consent: {
-        status: 'pending_consent',
-        consentTimestamp: new Date().toISOString(),
-        consentedBy: 'Awaiting Operator Signature',
-        authorizedScopes: ['offers:read', 'offers:evaluate', 'offers:accept_simulation_only'],
-        signatureHash: 'sig_pending_auth',
-        legalNoticeAccepted: false
-      },
-      totalOffersEvaluated: 0,
-      totalOffersGrabbed: 0,
-      failedRequestsCount: 0,
-      antiFingerprintHeader: 'CustomAgent/1.0 SecureConnectorLayer',
-      environment: environment === 'production_gateway' ? 'production_gateway' : 'sandbox_simulation'
-    };
-
-    botConnectorsStore.unshift(newConnector);
-    res.json({ ok: true, connector: newConnector });
+  app.post('/api/botgrabber/connectors', requireAdminSecret, (_req, res) => {
+    return res.status(503).json({
+      ok: false,
+      connected: false,
+      error: 'Connector creation is disabled until a real authorized provider adapter and secure secret storage are implemented.'
+    });
   });
 
   // 4. POST /api/botgrabber/consent (Consent-Aware Status Management)
-  app.post('/api/botgrabber/consent', (req, res) => {
-    const { connectorId, action, operatorName, authorizedScopes, revocationReason } = req.body;
-    const connector = botConnectorsStore.find(c => c.id === connectorId);
-    if (!connector) {
-      return res.status(404).json({ ok: false, error: 'Connector not found' });
-    }
-
-    if (action === 'grant') {
-      connector.consent = {
-        status: 'consented',
-        consentTimestamp: new Date().toISOString(),
-        consentedBy: operatorName || 'Verified Operator',
-        authorizedScopes: authorizedScopes && authorizedScopes.length > 0 ? authorizedScopes : ['offers:read', 'offers:evaluate', 'offers:accept_simulation_only'],
-        signatureHash: `sig_sha256_${Math.random().toString(36).substring(2, 12)}`,
-        legalNoticeAccepted: true
-      };
-    } else if (action === 'revoke') {
-      connector.consent = {
-        ...connector.consent,
-        status: 'revoked',
-        authorizedScopes: [],
-        legalNoticeAccepted: false,
-        revocationReason: revocationReason || 'Consent revoked by operator.'
-      };
-    } else if (action === 'reset_pending') {
-      connector.consent = {
-        ...connector.consent,
-        status: 'pending_consent',
-        legalNoticeAccepted: false
-      };
-    }
-
-    res.json({
-      ok: true,
-      connectorId: connector.id,
-      consent: connector.consent,
-      message: `Consent updated to ${connector.consent.status.toUpperCase()}`
+  app.post('/api/botgrabber/consent', requireAdminSecret, (_req, res) => {
+    return res.status(503).json({
+      ok: false,
+      consented: false,
+      error: 'Consent cannot be marked granted by this placeholder endpoint. Use a real consent flow with auditable persistence.'
     });
   });
 
   // 5. POST /api/botgrabber/simulate-offer (Simulation-Safe Execution Engine)
-  app.post('/api/botgrabber/simulate-offer', (req, res) => {
-    if (circuitBreakerState.tripped) {
-      return res.status(423).json({
-        ok: false,
-        error: 'CIRCUIT_BREAKER_TRIPPED',
-        message: `BotGrabber circuit breaker is engaged: "${circuitBreakerState.reason}". Safety lockout active.`
-      });
-    }
-
-    const { provider, payout, miles, storeName, customLatencyMs } = req.body;
-    const targetConnector = botConnectorsStore.find(c => c.providerType === provider || c.id === provider);
-
-    // Consent gate check
-    if (targetConnector && targetConnector.consent.status !== 'consented') {
-      return res.status(403).json({
-        ok: false,
-        error: 'CONSENT_POLICY_BLOCKED',
-        message: `Connector ${targetConnector.name} cannot evaluate or grab offers because its consent status is ${targetConnector.consent.status.toUpperCase()}. Operator affirmation is required.`,
-        consentStatus: targetConnector.consent.status
-      });
-    }
-
-    // Algorithmic evaluation with jitter (38ms - 95ms)
-    const baseLatency = customLatencyMs || Math.floor(Math.random() * 45) + 38;
-    const jitter = Math.floor(Math.random() * 14) - 7;
-    const grabSpeedMs = Math.max(18, baseLatency + jitter);
-
-    const simulatedOffer = {
-      id: `sim_off_${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      provider: targetConnector ? targetConnector.providerType : (provider || 'walmart_spark'),
-      providerLabel: targetConnector ? targetConnector.name : 'Walmart Spark Gateway',
-      payout: Number(payout) || (Math.floor(Math.random() * 28) + 24.50),
-      estimatedMiles: Number(miles) || (Math.floor(Math.random() * 6) + 2.4),
-      itemsCount: Math.floor(Math.random() * 40) + 12,
-      storeName: storeName || 'Walmart Supercenter #2201 (Curbside Bay 7)',
-      dropoffAddress: '742 Evergreen Terrace (Residential)',
-      expiresInSeconds: 45,
-      grabLatencyMs: grabSpeedMs,
-      timestamp: Date.now(),
-      status: 'grabbed_safe',
-      environment: 'simulation_safe_sandbox',
-      fingerprintAudit: {
-        tlsHandshakeMs: 8,
-        antiDetectionJitterAppliedMs: jitter,
-        sha256PayloadHash: `payload_${Math.random().toString(36).substring(2, 10)}`
-      }
-    };
-
-    if (targetConnector) {
-      targetConnector.totalOffersEvaluated += 1;
-      targetConnector.totalOffersGrabbed += 1;
-      targetConnector.lastGrabTimestamp = new Date().toISOString();
-    }
-
-    res.json({
-      ok: true,
-      mode: botGrabberMode,
-      safeSimulation: true,
-      grabbedOffer: simulatedOffer,
-      message: `Offer grabbed in ${grabSpeedMs}ms via Simulation-Safe sandbox. Zero deactivation risk.`
+  app.post('/api/botgrabber/simulate-offer', requireAuth, (_req, res) => {
+    return res.status(410).json({
+      ok: false,
+      accepted: false,
+      error: "Automated offer grabbing is disabled. Use manual opportunity comparison and open the official provider app to make decisions."
     });
   });
 
-  // 6. POST /api/botgrabber/circuit-breaker (Safety Tripping & Disarming)
   app.post('/api/botgrabber/circuit-breaker', (req, res) => {
     const { action, reason } = req.body;
     if (action === 'trip') {
@@ -2471,43 +1744,35 @@ async function startServer() {
   });
 
   // 7. POST /api/botgrabber/mode-toggle (Simulation-Safe vs Live with Guardrails)
-  app.post('/api/botgrabber/mode-toggle', (req, res) => {
-    const { mode, adminConfirmationKey } = req.body;
-    if (mode === 'production_live') {
-      if (adminConfirmationKey !== 'CONFIRM_LIVE_OPS_TOS_SAFE') {
-        return res.status(400).json({
-          ok: false,
-          error: 'MISSING_LIVE_CONFIRMATION',
-          message: 'Production live mode requires affirmative administrative safety confirmation key.'
-        });
-      }
-      botGrabberMode = 'production_live';
-    } else {
-      botGrabberMode = 'simulation_safe';
+  app.post('/api/botgrabber/mode-toggle', requireAdminSecret, (req, res) => {
+    if (req.body?.mode === 'production_live') {
+      return res.status(403).json({
+        ok: false,
+        mode: 'manual_only',
+        error: 'Live automated acceptance is disabled. Use manual opportunity comparison and official provider apps.'
+      });
     }
-
-    res.json({
-      ok: true,
-      mode: botGrabberMode,
-      message: `BotGrabber operating profile set to ${botGrabberMode.toUpperCase()}`
-    });
+    botGrabberMode = 'simulation_safe';
+    return res.json({ ok: true, mode: 'manual_only', automatedAcceptanceEnabled: false });
   });
 
   // 8. GET /api/botgrabber/diagnostics & Incidents
-  app.get('/api/botgrabber/diagnostics', (req, res) => {
+  app.get('/api/botgrabber/diagnostics', (_req, res) => {
     res.json({
       ok: true,
+      verified: false,
       incidents: botGrabberIncidentsStore,
       tickets: botGrabberTicketsStore,
       telemetrySnapshot: {
         timestamp: new Date().toISOString(),
-        systemLoad: '0.14',
-        memoryUsageMb: 88,
-        activeSockets: 6,
-        avgLatencyMs: 27,
-        jitterStdDevMs: 3.2,
+        systemLoad: null,
+        memoryUsageMb: null,
+        activeSockets: null,
+        avgLatencyMs: null,
+        jitterStdDevMs: null,
         circuitBreaker: circuitBreakerState,
-        operatingMode: botGrabberMode
+        operatingMode: 'manual_only',
+        message: 'Live telemetry has not been configured.'
       }
     });
   });
@@ -2739,33 +2004,16 @@ Operator Query: ${prompt || 'Perform full diagnostic review on jitter, grab rate
   // HACYBERGLOBATECH INTEGRATION SERVICES: AppDeploy, Domains, Leads, Supabase
   // ===================================================================
 
-  const leadsStore: Array<any> = [
-    {
-      id: 'HGT-LEAD-880101',
-      fullName: 'Marcus Vance',
-      email: 'm.vance@logistics-pilot.io',
-      mobile: '+1 (469) 555-0198',
-      streetAddress: '1420 Commerce St',
-      zipCode: '75201',
-      hardwareProfile: 'iPhone (iOS)',
-      networks: ['Walmart Spark', 'DoorDash'],
-      orderPreference: 'High-Value Priority Orders ($30+)',
-      paymentMethod: 'Zelle',
-      status: 'verified',
-      createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-      telegramNotified: true,
-      supabaseSynced: false
-    }
-  ];
+  const leadsStore: Array<any> = [];
 
   // 1. AppDeploy Project & Environment Information Endpoint
   app.get("/api/appdeploy/project", async (req, res) => {
     const supabaseHealth = await checkSupabaseHealth();
     res.json({
       ok: true,
-      projectId: process.env.APPDEPLOY_PROJECT_ID || '8808707299',
+      projectId: process.env.APPDEPLOY_PROJECT_ID || null,
       appName: process.env.APPDEPLOY_APP_NAME || 'HACYBERGLOBATECH Activation & Verification Support Center',
-      status: 'ACTIVE_PRODUCTION',
+      status: 'UNVERIFIED',
       ingressHost: 'ais-pre-dlxtcm22exfd5ssxaa6siv-201471674421.us-east5.run.app',
       domains: {
         mainWebsite: process.env.MAIN_WEBSITE_URL || 'https://web.hacyberglobal.dgdns.org/',

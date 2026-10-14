@@ -75,7 +75,7 @@ export default function TelegramBotSetup({
     if (saved && saved.trim() !== '') {
       return saved;
     }
-    return '8676025127:AAHDojtnvoghlky30qPrdxdrWMvblTlB8xA';
+    return '';
   });
   const [billingChatId, setBillingChatId] = useState(() => {
     const saved = localStorage.getItem('spark_bot_billing_chat_id');
@@ -87,10 +87,10 @@ export default function TelegramBotSetup({
 
   // Bitcoin Account & Zelle Routing Configuration states
   const [bitcoinAddress, setBitcoinAddress] = useState(() => {
-    return localStorage.getItem('spark_bot_btc_address') || 'bc1qxy2kg3ut7nd673j6vfvjtpx6kwsyudh8t6fsp0';
+    return localStorage.getItem('spark_bot_btc_address') || '';
   });
   const [zelleRoutingAddress, setZelleRoutingAddress] = useState(() => {
-    return localStorage.getItem('spark_bot_zelle_address') || 'zelle@hacyberglobal.dpdns.org';
+    return localStorage.getItem('spark_bot_zelle_address') || '';
   });
 
   // Sales and Usage Rules delivered automatically to customers
@@ -140,28 +140,7 @@ export default function TelegramBotSetup({
         }
       } catch (e) {}
     }
-    return [
-      {
-        id: 'rec_01',
-        customerHandle: '@driver_expert_99',
-        customerPhone: '+1 (312) 555-0810',
-        method: 'Bitcoin',
-        amountText: '130.00',
-        status: 'pending',
-        timestamp: 'Just now',
-        txHashOrProof: 'TXN_BTC_49204920A382F'
-      },
-      {
-        id: 'rec_02',
-        customerHandle: '@spark_king_atl',
-        customerPhone: '+1 (404) 555-4921',
-        method: 'Zelle',
-        amountText: '130.00',
-        status: 'pending',
-        timestamp: '18 min ago',
-        txHashOrProof: 'ZEL_REF_8DX94820LK'
-      }
-    ];
+    return [];
   });
 
   useEffect(() => {
@@ -405,11 +384,10 @@ export default function TelegramBotSetup({
         setTgConnectionStatus('ACTIVE');
         setTestLogs(prev => [
           ...prev,
-          `⚠️ CORS / NETWORK PREVIEW INGRESS RESTRICTION DETECTED.`,
-          `⚡ Swapping to Local Sandbox Pipeline (Simulated Handshake Success)...`,
-          `✅ MOCK INTERNET ACCESS ACCEPTED: Telegram payload simulated on subscriber ${chatId}!`
+          `⚠️ Live Telegram verification could not be completed from this browser session.`,
+          `No message was sent. Configure the bot token on the server and verify the connection from the backend.`
         ]);
-        onAddLog('info', `✅ TELEGRAM STANDBY (SANDBOX): Integration confirmed. Virtual message piped to receiver ID: ${chatId}.`, undefined, 'TG_PROBE_SIM');
+        onAddLog('warning', `Telegram connection is unverified; no test message was sent.`, undefined, 'TG_PROBE_UNVERIFIED');
       }, 1200);
     }
   };
@@ -510,13 +488,13 @@ export default function TelegramBotSetup({
       }
     } catch (e) {
       setTimeout(() => {
-        setBillingStatus('simulated');
+        setBillingStatus('failed');
         setBillingTestLogs(prev => [
           ...prev,
-          `⚠️ Live network requests CORS protected. Simulation fallback active.`,
-          `✅ MOCK INTERNET ACCESS ACCEPTED: Secondary custom billing bot linked on Chat ID: ${billingChatId}!`
+          `⚠️ Telegram connection could not be verified.`,
+          `No message was sent; verify the server-side Telegram integration.`
         ]);
-        onAddLog('info', `✅ BILLING BOT STANDBY (SANDBOX): Customer bot synced successfully. Ready to dispatch rules & rates.`, undefined, 'TG_BILL_PROBE_SIM');
+        onAddLog('warning', `Telegram billing bot connection unverified; no message was sent.`, undefined, 'TG_BILL_PROBE_FAIL');
       }, 1000);
     }
   };
@@ -565,28 +543,14 @@ export default function TelegramBotSetup({
       if (data.ok) {
         onAddLog('info', `✅ OUTREACH DISPATCHED! Customer rules, Stripe checkout, and Bitcoin wallet coordinates dispatched to ${prospectUsername} via billing bot.`, undefined, 'OUTREACH_OK');
       } else {
-        onAddLog('info', `✅ OUTREACH SIMULATED (SANDBOX): Custom payment terms & rules packet successfully relayed into pipeline for lead ${prospectUsername} (${prospectPhone}).`, undefined, 'OUTREACH_SIM');
+        onAddLog('warning', 'Telegram did not confirm customer outreach delivery; no success was recorded.', undefined, 'OUTREACH_FAIL');
       }
     } catch (e) {
-      onAddLog('info', `✅ OUTREACH SIMULATED (SANDBOX): Custom payment terms & rules packet successfully relayed into pipeline for lead ${prospectUsername} (${prospectPhone}).`, undefined, 'OUTREACH_SIM');
+      onAddLog('warning', 'Telegram did not confirm customer outreach delivery; no success was recorded.', undefined, 'OUTREACH_FAIL');
     }
 
-    // Automatically trigger a pending receipt submission from this user to allow full preview loop
-    setTimeout(() => {
-      onAddLog('warning', `🔔 NEW ACTIONABLE TICKET: Customer ${prospectUsername} submitted payment proof receipt ($${parseFloat(paymentAmount).toFixed(2)} - ${bitcoinAddress ? 'Bitcoin' : 'Zelle'}). Review the pending receipt below!`, undefined, 'TICKET_RECVD');
-      
-      const newRec: ReceiptRecord = {
-        id: `rec_${Date.now()}`,
-        customerHandle: prospectUsername,
-        customerPhone: prospectPhone,
-        method: Math.random() > 0.5 ? 'Bitcoin' : 'Zelle',
-        amountText: parseFloat(paymentAmount).toFixed(2),
-        status: 'pending',
-        timestamp: 'Just now',
-        txHashOrProof: Math.random() > 0.5 ? `TXN_BTC_${Math.floor(Math.random()*10000000).toString(16).toUpperCase()}` : `ZEL_REF_${Math.floor(Math.random()*10000000).toString(16).toUpperCase()}`
-      };
-      setReceiptQueue(prev => [newRec, ...prev]);
-    }, 3000);
+    // Receipt records must originate from real customer submissions; never fabricate payment evidence.
+    onAddLog('info', 'Awaiting a real customer receipt submission; no receipt was generated.', undefined, 'RECEIPT_AWAITING_REAL_SUBMISSION');
   };
 
   const handleApproveReceipt = async (id: string, customerHandle: string, amount: string, method: string) => {
@@ -647,26 +611,8 @@ export default function TelegramBotSetup({
     } catch(e) {}
   };
 
-  const handleAddDemoReceipt = (method: 'Bitcoin' | 'Zelle') => {
-    const randomNames = ['@chicago_dispatcher', '@delivery_hustler_tx', '@houston_sparky', '@kansas_auto_tap'];
-    const randomPhones = ['+1 (312) 555-1029', '+1 (713) 555-0145', '+1 (281) 555-7301', '+1 (913) 555-3392'];
-    const idx = Math.floor(Math.random() * randomNames.length);
-
-    const newRec: ReceiptRecord = {
-      id: `rec_${Date.now()}`,
-      customerHandle: randomNames[idx],
-      customerPhone: randomPhones[idx],
-      method: method,
-      amountText: parseFloat(paymentAmount).toFixed(2),
-      status: 'pending',
-      timestamp: 'Just now',
-      txHashOrProof: method === 'Bitcoin' 
-        ? `TXN_BTC_${Math.floor(Math.random()*1000000000).toString(16).toUpperCase()}` 
-        : `ZEL_REF_${Math.floor(Math.random()*1000000000).toString(16).toUpperCase()}`
-    };
-
-    setReceiptQueue(prev => [newRec, ...prev]);
-    onAddLog('info', `🎟️ Demo customer ticket created: ${randomNames[idx]} uploaded a pending ${method} proof!`, undefined, 'DEMO_TICKET');
+  const handleAddDemoReceipt = (_method: 'Bitcoin' | 'Zelle') => {
+    onAddLog('info', 'Demo action only: no customer receipt or transaction evidence was created.', undefined, 'DEMO_ONLY');
   };
 
   const getDispatchedLeadsReport = () => {
